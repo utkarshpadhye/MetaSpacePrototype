@@ -1,0 +1,77 @@
+{
+  "atlas": "/assets/sprites/props/atlas-props.png",
+  "sprites": [
+    {
+      "id": "chair-desk",
+      "frame": { "x": 0, "y": 0, "width": 256, "height": 128 },
+      "drawWidth": 2,
+      "drawHeight": 1,
+      "anchorX": 0.5,
+      "anchorY": 0.9,
+      "shadowOffset": 1,
+      "shadowOpacity": 0.13,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    {
+      "id": "lamp-round-floor",
+      "frame": { "x": 256, "y": 0, "width": 128, "height": 128 },
+      "drawWidth": 1,
+      "drawHeight": 1,
+      "anchorX": 0.5,
+      "anchorY": 0.9,
+      "shadowOffset": 1,
+      "shadowOpacity": 0.14,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    {
+      "id": "lounge-sofa",
+      "frame": { "x": 0, "y": 128, "width": 384, "height": 160 },
+      "drawWidth": 3,
+      "drawHeight": 1.2,
+      "anchorX": 0.5,
+      "anchorY": 0.9,
+      "shadowOffset": 1,
+      "shadowOpacity": 0.16,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    {
+      "id": "lounge-sofa-corner",
+      "frame": { "x": 384, "y": 128, "width": 384, "height": 160 },
+      "drawWidth": 3,
+      "drawHeight": 1.2,
+      "anchorX": 0.5,
+      "anchorY": 0.9,
+      "shadowOffset": 1,
+      "shadowOpacity": 0.16,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    {
+      "id": "potted-plant",
+      "frame": { "x": 384, "y": 0, "width": 128, "height": 128 },
+      "drawWidth": 1,
+      "drawHeight": 1,
+      "anchorX": 0.5,
+      "anchorY": 0.9,
+      "shadowOffset": 1,
+      "shadowOpacity": 0.12,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    {
+      "id": "rug-square",
+      "frame": { "x": 0, "y": 288, "width": 384, "height": 384 },
+      "drawWidth": 3,
+      "drawHeight": 3,
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "shadowOffset": 0,
+      "shadowOpacity": 0,
+      "offsetX": 0,
+      "offsetY": 0
+    }
+  ]
+}

@@ -1,0 +1,393 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  --pixel-ink: #1a202c;
+  --pixel-ink-muted: #5a677f;
+  --pixel-bg: #f4f6fb;
+  --pixel-panel: rgba(248, 250, 255, 0.95);
+  --pixel-border: #c9d2e3;
+  --pixel-accent: #2b6cb0;
+  --pixel-danger: #e53e3e;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--pixel-bg);
+  color: var(--pixel-ink);
+  overflow: hidden;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+}
+
+.game-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+.pixel-ui {
+  font-family: 'Press Start 2P', 'IBM Plex Sans', sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.pixel-panel {
+  border: 2px solid var(--pixel-border);
+  background: var(--pixel-panel);
+  box-shadow: 0 0 0 1px rgba(12, 17, 27, 0.08);
+  image-rendering: pixelated;
+}
+
+.pixel-button {
+  border: 2px solid var(--pixel-border);
+  background: #e9edf6;
+  color: var(--pixel-ink);
+  box-shadow: 0 2px 0 0 #c9d2e3;
+  text-transform: uppercase;
+}
+
+.pixel-button--danger {
+  background: #f8d7da;
+  border-color: #f0b9c0;
+  color: #7a1b23;
+}
+
+.pixel-button--success {
+  background: #d5f5e3;
+  border-color: #b6e7cd;
+  color: #1f4b3a;
+}
+
+.pixel-button:hover {
+  background: #dbe4f1;
+}
+
+.pixel-button--danger:hover {
+  background: #f3c9cd;
+}
+
+.pixel-button--success:hover {
+  background: #c6efd8;
+}
+
+.pixel-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 0 #c9d2e3;
+}
+
+.topbar-button {
+  transition: background 200ms ease, transform 100ms ease;
+}
+
+.topbar-button:active {
+  transform: scale(0.92);
+}
+
+.participant-row {
+  padding: 0 16px;
+  transition: background 150ms ease, padding-left 150ms ease;
+}
+
+.participant-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+  padding-left: 20px;
+}
+
+.participant-row--nearby {
+  border-left: 4px solid #48bb78;
+  padding-left: 12px;
+}
+
+.participant-row--nearby:hover {
+  padding-left: 16px;
+}
+
+.chat-message {
+  border-radius: 6px;
+  padding: 4px 6px;
+  transition: background 150ms ease;
+}
+
+.chat-message:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.emoji-popover {
+  transform-origin: top right;
+  animation: emojiPop 150ms ease-out both;
+}
+
+.badge-bounce {
+  animation: badgeBounce 200ms ease-out both;
+}
+
+.room-transition {
+  pointer-events: none;
+}
+
+.pixel-badge {
+  border: 2px solid #0b0d14;
+  background: #e53e3e;
+  color: #ffffff;
+}
+
+.pixel-input {
+  border: 2px solid var(--pixel-border);
+  background: #ffffff;
+  color: var(--pixel-ink);
+  box-shadow: inset 0 0 0 1px rgba(12, 17, 27, 0.08);
+}
+
+.pixel-pill {
+  border: 2px solid var(--pixel-border);
+  background: #ffffff;
+  color: var(--pixel-ink-muted);
+}
+
+.pixel-divider {
+  border-color: rgba(43, 54, 74, 0.8);
+}
+
+.typing-dots {
+  display: inline-flex;
+  margin-left: 4px;
+  gap: 2px;
+}
+
+.typing-dots span {
+  display: inline-block;
+  animation: typingPulse 1.2s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.ana-thinking {
+  min-width: 180px;
+}
+
+.ana-thinking-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ana-thinking-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: #2563eb;
+  opacity: 0.3;
+  animation: anaDotPulse 1s infinite ease-in-out;
+}
+
+.ana-thinking-dots span:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.ana-thinking-dots span:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+@keyframes anaDotPulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0) scale(0.95);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.08);
+  }
+}
+
+@keyframes typingPulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.2;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+}
+
+.video-bubble.bubble-enter {
+  animation: bubbleIn 300ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.video-bubble.bubble-leave {
+  animation: bubbleOut 200ms ease-in both;
+}
+
+.video-bubble.bubble-speaking {
+  animation: bubblePulse 1.5s ease-out infinite;
+}
+
+@keyframes bubbleIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes bubbleOut {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+@keyframes bubblePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(72, 187, 120, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 0 6px rgba(72, 187, 120, 0);
+  }
+}
+
+.toast-item {
+  will-change: transform, opacity;
+}
+
+.toast-enter {
+  animation: toastIn 300ms ease-out both;
+}
+
+.toast-leave {
+  animation: toastOut 200ms ease-in both;
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+button,
+input,
+textarea {
+  cursor: pointer;
+}
+
+input,
+textarea {
+  cursor: text;
+}
+
+@keyframes toastIn {
+  0% {
+    opacity: 0;
+    transform: translateX(120%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toastOut {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(120%);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes emojiPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes badgeBounce {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes roomFadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes roomFadeOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.room-fade-in {
+  animation: roomFadeIn 300ms ease forwards;
+}
+
+.room-fade-out {
+  animation: roomFadeOut 300ms ease forwards;
+}

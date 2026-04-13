@@ -1,0 +1,58 @@
+{
+  "sprites": [
+    {
+      "id": "chair-desk",
+      "src": "/assets/sprites/props/chair-desk.svg",
+      "drawWidth": 2,
+      "drawHeight": 1,
+      "anchorX": 0.5,
+      "anchorY": 0.9,
+      "shadowOffset": 1
+    },
+    {
+      "id": "lamp-round-floor",
+      "src": "/assets/sprites/props/lamp-round-floor.svg",
+      "drawWidth": 1,
+      "drawHeight": 1,
+      "anchorX": 0.5,
+      "anchorY": 0.9,
+      "shadowOffset": 1
+    },
+    {
+      "id": "lounge-sofa",
+      "src": "/assets/sprites/props/lounge-sofa.svg",
+      "drawWidth": 3,
+      "drawHeight": 1.2,
+      "anchorX": 0.5,
+      "anchorY": 0.9,
+      "shadowOffset": 1
+    },
+    {
+      "id": "lounge-sofa-corner",
+      "src": "/assets/sprites/props/lounge-sofa-corner.svg",
+      "drawWidth": 3,
+      "drawHeight": 1.2,
+      "anchorX": 0.5,
+      "anchorY": 0.9,
+      "shadowOffset": 1
+    },
+    {
+      "id": "potted-plant",
+      "src": "/assets/sprites/props/potted-plant.svg",
+      "drawWidth": 1,
+      "drawHeight": 1,
+      "anchorX": 0.5,
+      "anchorY": 0.9,
+      "shadowOffset": 1
+    },
+    {
+      "id": "rug-square",
+      "src": "/assets/sprites/props/rug-square.svg",
+      "drawWidth": 3,
+      "drawHeight": 3,
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "shadowOffset": 0
+    }
+  ]
+}
