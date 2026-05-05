@@ -119,6 +119,15 @@ export function AnaOverlay({
   const [input, setInput] = useState('')
   const messagesRef = useRef<HTMLDivElement | null>(null)
 
+  const handleSubmit = () => {
+    const value = input.trim()
+    if (!value || thinking) {
+      return
+    }
+    onSend(value)
+    setInput('')
+  }
+
   useEffect(() => {
     if (!open) {
       return
@@ -179,12 +188,7 @@ export function AnaOverlay({
           className="border-t border-slate-200 bg-white px-5 py-4"
           onSubmit={(event) => {
             event.preventDefault()
-            const value = input.trim()
-            if (!value || thinking) {
-              return
-            }
-            onSend(value)
-            setInput('')
+            handleSubmit()
           }}
         >
           <div className="flex items-end gap-3">
@@ -193,6 +197,12 @@ export function AnaOverlay({
               placeholder="Message Ana..."
               value={input}
               onChange={(event) => setInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                  event.preventDefault()
+                  handleSubmit()
+                }
+              }}
             />
             <button
               type="submit"

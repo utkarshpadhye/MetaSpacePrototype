@@ -58,6 +58,53 @@ npm run preview  # preview production build locally
 npm run lint     # run ESLint checks
 ```
 
+## Local AI Conference Captions + Summary
+
+Conference room now supports:
+
+- Live speech-to-text captions
+- Auto-generated meeting summary (key points, actions, decisions)
+
+Everything is local-only. No external transcription API calls are used.
+
+### Start the local STT service
+
+From repo root:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r local-ai/requirements.txt
+python local-ai/stt_server.py
+```
+
+The service runs on `http://127.0.0.1:8765`.
+
+Optional model tuning via env vars:
+
+```bash
+export METASPACE_STT_MODEL=base.en
+export METASPACE_STT_DEVICE=cpu
+export METASPACE_STT_COMPUTE_TYPE=int8
+python local-ai/stt_server.py
+```
+
+### Run frontend
+
+In another terminal:
+
+```bash
+cd app
+npm run dev
+```
+
+Then enter the conference room and use:
+
+- `Captions On/Off`
+- `Clear Notes`
+- `Share Screen`
+- `Mic On/Off`
+
 ## Optional: Sprite Utility Script
 
 There is a helper script at `app/scripts/stitch_sprite.py`.

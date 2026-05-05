@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { debugLog } from '../utils/debugLog'
 
 type RemotePeer = {
@@ -26,6 +26,7 @@ type UseConferenceWebRTCResult = {
   localStream: MediaStream | null
   remotePeers: RemotePeer[]
   error: string | null
+  setSharedVideoTrack: (track: MediaStreamTrack | null) => void
 }
 
 const SIGNAL_CHANNEL_PREFIX = 'metaspace-conference-webrtc'
@@ -57,6 +58,8 @@ export function useConferenceWebRTC({
   const remoteNamesRef = useRef<Map<string, string>>(new Map())
   const pendingCandidatesRef = useRef<Map<string, RTCIceCandidateInit[]>>(new Map())
   const localStreamRef = useRef<MediaStream | null>(null)
+  const cameraVideoTrackRef = useRef<MediaStreamTrack | null>(null)
+  const sharedVideoTrackRef = useRef<MediaStreamTrack | null>(null)
   const signalingChannelName = `${SIGNAL_CHANNEL_PREFIX}-${sessionId}`
 
   const getPeerId = () => {
@@ -118,9 +121,14 @@ export function useConferenceWebRTC({
 
     const stream = localStreamRef.current
     if (stream) {
-      stream.getTracks().forEach((track) => {
+      stream.getAudioTracks().forEach((track) => {
         pc.addTrack(track, stream)
       })
+      const outboundVideoTrack =
+        sharedVideoTrackRef.current ?? cameraVideoTrackRef.current
+      if (outboundVideoTrack) {
+        pc.addTrack(outboundVideoTrack, stream)
+      }
     }
 
     pc.onicecandidate = (event) => {
@@ -200,6 +208,37 @@ export function useConferenceWebRTC({
     }
   }
 
+  const setSharedVideoTrack = useCallback((track: MediaStreamTrack | null) => {
+    sharedVideoTrackRef.current = track
+    const fallbackTrack = cameraVideoTrackRef.current
+    const nextTrack = track ?? fallbackTrack
+
+    pcsRef.current.forEach((pc) => {
+      const sender = pc
+        .getSenders()
+        .find((candidate) => candidate.track?.kind === 'video')
+
+      if (sender) {
+        void sender.replaceTrack(nextTrack ?? null)
+        return
+      }
+
+      if (!nextTrack) {
+        return
+      }
+
+      const stream = localStreamRef.current
+      if (stream) {
+        pc.addTrack(nextTrack, stream)
+      }
+    })
+
+    debugLog('webrtc', 'updated outbound video track', {
+      usingSharedTrack: Boolean(track),
+      hasFallbackTrack: Boolean(fallbackTrack),
+    })
+  }, [])
+
   useEffect(() => {
     if (!active) {
       debugLog('webrtc', 'deactivating conference')
@@ -222,6 +261,8 @@ export function useConferenceWebRTC({
         stream.getTracks().forEach((track) => track.stop())
       }
       localStreamRef.current = null
+      cameraVideoTrackRef.current = null
+      sharedVideoTrackRef.current = null
       queueMicrotask(() => {
         setLocalStream(null)
         setError(null)
@@ -249,6 +290,8 @@ export function useConferenceWebRTC({
         stream.getAudioTracks().forEach((track) => {
           track.enabled = !muted
         })
+
+        cameraVideoTrackRef.current = stream.getVideoTracks()[0] ?? null
 
         localStreamRef.current = stream
         setLocalStream(stream)
@@ -385,5 +428,6 @@ export function useConferenceWebRTC({
     localStream,
     remotePeers,
     error,
+    setSharedVideoTrack,
   }
 }

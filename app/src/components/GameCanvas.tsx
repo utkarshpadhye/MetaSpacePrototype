@@ -121,7 +121,11 @@ type GameCanvasProps = {
       nearby: boolean
       distance: number
       roomId: string
+      sectionId: string
+      sectionName: string
       inSameRoom: boolean
+      roleName: string
+      roleColor: string
     }>,
   ) => void
   onRoomTransition: (targetRoom: string) => void
@@ -130,6 +134,7 @@ type GameCanvasProps = {
   syncedPeers: SyncedPeer[]
   localName: string
   localMuted: boolean
+  roomPermissions: Set<string>
   onLocalPresence: (state: {
     x: number
     y: number
@@ -213,6 +218,7 @@ export function GameCanvas({
   syncedPeers,
   localName,
   localMuted,
+  roomPermissions,
   onLocalPresence,
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -542,6 +548,13 @@ export function GameCanvas({
       ) {
         const nearest = nearestInteractableRef.current
         if (nearest) {
+          if (
+            nearest.type === 'door' &&
+            nearest.requiredPermission &&
+            !roomPermissions.has(nearest.requiredPermission)
+          ) {
+            return
+          }
           onInteractionChange(nearest)
         }
       }
@@ -558,7 +571,7 @@ export function GameCanvas({
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
     }
-  }, [interaction, onInteractionChange, setZoomTarget])
+  }, [interaction, onInteractionChange, roomPermissions, setZoomTarget])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -935,6 +948,24 @@ export function GameCanvas({
           ctx.restore()
           return
         }
+        if (object.type === 'library') {
+          const drawW = object.width * TILE_SIZE
+          const drawH = object.height * TILE_SIZE
+          ctx.save()
+          ctx.fillStyle = '#f0f9ff'
+          ctx.strokeStyle = '#0369a1'
+          ctx.lineWidth = 2
+          roundRect(ctx, drawX + 4, drawY + 4, drawW - 8, drawH - 8, 4)
+          ctx.fill()
+          ctx.stroke()
+          ctx.fillStyle = '#0c4a6e'
+          ctx.font = '8px "Press Start 2P", sans-serif'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.fillText('LB', drawX + drawW / 2, drawY + drawH / 2)
+          ctx.restore()
+          return
+        }
         if (tilesetReadyRef.current && tilesetRef.current) {
           const tileX = object.tileId % TILESET_COLUMNS
           const tileY = Math.floor(object.tileId / TILESET_COLUMNS)
@@ -1183,6 +1214,7 @@ export function GameCanvas({
       desks: 'rgba(147, 197, 114, 0.06)',
       lounge: 'rgba(232, 161, 98, 0.08)',
       cafeteria: 'rgba(244, 200, 120, 0.07)',
+      library: 'rgba(125, 211, 252, 0.09)',
       'focus-a': 'rgba(204, 175, 245, 0.07)',
       'focus-b': 'rgba(204, 175, 245, 0.07)',
       'focus-c': 'rgba(204, 175, 245, 0.07)',
@@ -1321,6 +1353,8 @@ export function GameCanvas({
         return '#2f855a'
       case 'desk':
         return '#975a16'
+      case 'library':
+        return '#0ea5e9'
       default:
         return '#718096'
     }
@@ -1346,6 +1380,8 @@ export function GameCanvas({
         return 'Note'
       case 'game':
         return 'Mini Game'
+      case 'library':
+        return 'Library Kiosk'
       default:
         return 'Object'
     }
@@ -1373,7 +1409,15 @@ export function GameCanvas({
 
   const updateInteractionState = (nearest: WorldObject | null) => {
     nearestInteractableRef.current = nearest
-    const hint = nearest ? `Press X to use ${getObjectLabel(nearest.type)}` : ''
+    const isLockedDoor =
+      nearest?.type === 'door' &&
+      nearest.requiredPermission &&
+      !roomPermissions.has(nearest.requiredPermission)
+    const hint = nearest
+      ? isLockedDoor
+        ? `Padlock: ${nearest.lockedHint ?? 'No access'}`
+        : `Press X to use ${getObjectLabel(nearest.type)}`
+      : ''
     if (hint !== lastHintRef.current) {
       lastHintRef.current = hint
       onHintChange(hint)
@@ -1480,6 +1524,8 @@ export function GameCanvas({
       peersDirtyRef.current = false
       onParticipantsUpdate(
         peers.map((peer) => ({
+          sectionId: getSectionAt(peer.x, peer.y)?.id ?? 'main',
+          sectionName: getSectionAt(peer.x, peer.y)?.name ?? 'Main Room',
           id: peer.id,
           name: peer.name,
           muted: peer.muted,
@@ -1488,6 +1534,8 @@ export function GameCanvas({
           distance: peer.distance,
           roomId: peer.roomId,
           inSameRoom: peer.roomId === playerState.roomId,
+          roleName: 'Member',
+          roleColor: '#22c55e',
         })),
       )
     }
@@ -1701,13 +1749,15 @@ export function GameCanvas({
       player.walkFrameIndex = 0
     }
 
-    const door = objects.find((object) => object.type === 'door')
-    if (
-      door &&
-      player.x === door.x &&
-      player.y === door.y &&
-      Date.now() - lastDoorTriggerRef.current > 1000
-    ) {
+    const door = objects.find(
+      (object) => object.type === 'door' && player.x === object.x && player.y === object.y,
+    )
+    if (door && Date.now() - lastDoorTriggerRef.current > 1000) {
+      const requiredPermission = door.requiredPermission
+      if (requiredPermission && !roomPermissions.has(requiredPermission)) {
+        updateVoiceLabel(`Locked: ${door.lockedHint ?? 'No access'}`)
+        return
+      }
       lastDoorTriggerRef.current = Date.now()
       player.prevX = player.x
       player.prevY = player.y

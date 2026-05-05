@@ -103,12 +103,12 @@ export function BottomBar({
               :)
             </button>
             {isEmojiOpen ? (
-              <div className="pixel-panel emoji-popover absolute bottom-10 right-0 z-30 grid grid-cols-3 gap-2 p-2">
+              <div className="pixel-panel emoji-popover absolute bottom-10 right-0 z-30 grid grid-cols-3 gap-3 p-3">
                 {emojis.map((emoji) => (
                   <button
                     key={emoji}
                     type="button"
-                    className="pixel-button flex h-7 w-7 items-center justify-center text-[12px]"
+                    className="pixel-button emoji-option flex h-9 w-9 items-center justify-center p-0 text-[18px] leading-none normal-case"
                     onClick={() => {
                       setMessage((prev) => `${prev}${emoji}`)
                       setIsEmojiOpen(false)

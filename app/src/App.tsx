@@ -1,377 +1,368 @@
-import { useCallback, useEffect, useState } from 'react'
-import type { WorldObject } from './canvas/world'
-import { BottomBar } from './components/BottomBar'
-import { AnaOverlay } from './components/AnaOverlay'
-import { CalendarOverlay } from './components/CalendarOverlay'
-import { ConferenceCallOverlay } from './components/ConferenceCallOverlay'
-import { GameCanvas } from './components/GameCanvas'
-import { InteractionModal } from './components/InteractionModal'
+import { useMemo, useState } from 'react'
+import WorkspaceApp from './WorkspaceApp'
+import { AdminDashboard } from './components/AdminDashboard'
 import { LoadingOverlay } from './components/LoadingOverlay'
 import { NotificationToast } from './components/NotificationToast'
-import { ProximityVoiceOverlay } from './components/ProximityVoiceOverlay'
-import { RightSidebar } from './components/RightSidebar'
-import { TopBar } from './components/TopBar'
-import { VideoOverlay } from './components/VideoOverlay'
-import { useAnaAgent } from './hooks/useAnaAgent'
-import { useConferenceWebRTC } from './hooks/useConferenceWebRTC'
-import { useProximityVoiceWebRTC } from './hooks/useProximityVoiceWebRTC'
-import { useSessionPresence } from './hooks/useSessionPresence'
-import { debugLog } from './utils/debugLog'
 
-type ChatMessage = {
-  id: string
-  senderId: string
-  senderName: string
-  text: string
-  timestamp: number
-  type: 'text' | 'system'
+type AuthSession = {
+  accessToken: string
+  refreshToken: string
+  workspaceId: string
+  workspaceName: string
+  userId: string
+  userName: string
+  roleName: string
+  permissions: string[]
+  mustResetPassword: boolean
 }
 
-type SpeechBubble = {
-  id: string
-  text: string
-  createdAt: number
-  expiresAt: number
+type TokenResponse = {
+  access_token: string
+  refresh_token: string
+  workspace_id: string
+  workspace_name: string
+  user_id: string
+  user_name: string
+  role_name: string
+  permissions: string[]
+  must_reset_password: boolean
 }
 
-type EmojiReaction = {
-  id: string
-  emoji: string
-  createdAt: number
-}
-
-type Toast = {
+type AuthToast = {
   id: string
   message: string
   status: 'entering' | 'leaving'
 }
 
+const API_BASE_URL = 'http://127.0.0.1:8787'
+const STORAGE_KEY = 'metaspace-auth'
+
 function App() {
-  const session = useSessionPresence()
-  const [hintText, setHintText] = useState('')
-  const [roomName, setRoomName] = useState('Main Room')
-  const [voiceLabel, setVoiceLabel] = useState('Voice: Main Room (auto)')
-  const [interaction, setInteraction] = useState<WorldObject | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [roomTransition, setRoomTransition] = useState<'idle' | 'in' | 'out'>(
-    'idle',
-  )
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
-  const [isAnaOpen, setIsAnaOpen] = useState(false)
-  const [activePanel, setActivePanel] = useState<'participants' | 'chat' | null>(
-    null,
-  )
-  const [participants, setParticipants] = useState<
-    Array<{
-      id: string
-      name: string
-      muted: boolean
-      cameraOff: boolean
-      nearby: boolean
-      distance: number
-      roomId: string
-      inSameRoom: boolean
-    }>
-  >([])
-  const [speakingIds, setSpeakingIds] = useState<Set<string>>(new Set())
-  const visibleParticipants = participants.filter(
-    (participant) => participant.inSameRoom,
-  )
-  const nearbyPeers = participants
-    .filter((participant) => participant.nearby && participant.inSameRoom)
-    .map((participant) => ({
-      id: participant.id,
-      name: participant.name,
-      distance: participant.distance,
-      muted: participant.muted,
-      cameraOff: participant.cameraOff,
-      speaking: speakingIds.has(participant.id) && !participant.muted,
-    }))
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
-  const [isTyping, setIsTyping] = useState(false)
-  const [isMuted, setIsMuted] = useState(false)
-  const [speechBubbles, setSpeechBubbles] = useState<SpeechBubble[]>([])
-  const [emojiReactions, setEmojiReactions] = useState<EmojiReaction[]>([])
-  const [toasts, setToasts] = useState<Toast[]>([])
-  const [isInteractionClosing, setIsInteractionClosing] = useState(false)
-  const ana = useAnaAgent()
-  const prepareAnaModel = ana.prepareModel
-  const isConferenceRoom = voiceLabel.includes('Conference Room')
-  const conferenceCall = useConferenceWebRTC({
-    active: isConferenceRoom,
-    displayName: session.localName,
-    muted: isMuted,
-    sessionId: session.sessionId,
+  const [session, setSession] = useState<AuthSession | null>(() => {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    return raw ? (JSON.parse(raw) as AuthSession) : null
   })
-  const proximityTargets = participants
-    .filter((participant) => participant.nearby && participant.inSameRoom)
-    .map((participant) => ({ id: participant.id, name: participant.name }))
-  const proximityVoice = useProximityVoiceWebRTC({
-    active: !isConferenceRoom,
-    sessionId: session.sessionId,
-    localPeerId: session.localPeerId,
-    displayName: session.localName,
-    muted: isMuted,
-    targets: proximityTargets,
+  const [view, setView] = useState<'login' | 'signup' | 'reset' | 'dashboard' | 'workspace'>(() => {
+    if (!session) {
+      return 'login'
+    }
+    if (session.mustResetPassword) {
+      return 'reset'
+    }
+    return session.roleName === 'Owner' || session.roleName === 'Admin' ? 'dashboard' : 'workspace'
   })
+  const [loginForm, setLoginForm] = useState({ workspaceName: '', username: '', password: '' })
+  const [signupForm, setSignupForm] = useState({
+    workspaceName: '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+  })
+  const [resetForm, setResetForm] = useState({ currentPassword: '', newPassword: '' })
+  const [loginStatus, setLoginStatus] = useState('')
+  const [signupStatus, setSignupStatus] = useState('')
+  const [resetStatus, setResetStatus] = useState('')
+  const [toasts, setToasts] = useState<AuthToast[]>([])
+  const [bannerMessage, setBannerMessage] = useState('')
+  const [entryLoading, setEntryLoading] = useState(false)
+  const [entryMessage, setEntryMessage] = useState('')
 
-  useEffect(() => {
-    if (!isAnaOpen) {
-      return
-    }
-    void prepareAnaModel()
-  }, [isAnaOpen, prepareAnaModel])
+  const isAdmin = session?.roleName === 'Owner' || session?.roleName === 'Admin'
+  const permissions = useMemo(() => new Set<string>(session?.permissions ?? []), [session])
 
-  useEffect(() => {
-    debugLog('session', 'remote peers changed', {
-      sessionId: session.sessionId,
-      count: session.remotePeers.length,
-      peers: session.remotePeers.map((peer) => ({
-        id: peer.id,
-        name: peer.name,
-        x: peer.x,
-        y: peer.y,
-      })),
-    })
-  }, [session.remotePeers, session.sessionId])
+  const saveSession = (payload: AuthSession) => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
+    setSession(payload)
+  }
 
-  const handleInteractionClose = useCallback(() => {
-    if (!interaction) {
-      return
-    }
-    setIsInteractionClosing(true)
-    window.setTimeout(() => {
-      setInteraction(null)
-      setIsInteractionClosing(false)
-    }, 150)
-  }, [interaction])
-
-  const handleEmojiReaction = useCallback((emoji: string) => {
-    const now = Date.now()
-    setEmojiReactions((prev) => [
-      ...prev,
-      { id: `e-${now}`, emoji, createdAt: now },
-    ])
-  }, [])
-
-  const handleRoomTransition = useCallback((targetRoom: string) => {
-    setRoomTransition('in')
-    window.setTimeout(() => {
-      setRoomName(targetRoom)
-      setRoomTransition('out')
-      window.setTimeout(() => setRoomTransition('idle'), 300)
-    }, 300)
-  }, [])
-
-  const handleAssetsReady = useCallback(() => {
-    setIsLoading(false)
-  }, [])
-
-  const handleToggleParticipants = useCallback(() => {
-    setIsAnaOpen(false)
-    setActivePanel((current) =>
-      current === 'participants' ? null : 'participants',
-    )
-  }, [])
-
-  const handleToggleChat = useCallback(() => {
-    setIsAnaOpen(false)
-    setActivePanel((current) => {
-      const next = current === 'chat' ? null : 'chat'
-      if (next === 'chat') {
-        setUnreadCount(0)
-      }
-      return next
-    })
-  }, [])
-
-  const handleToggleAna = useCallback(() => {
-    setIsCalendarOpen(false)
-    setIsAnaOpen((prev) => !prev)
-    setActivePanel(null)
-  }, [])
-
-  const handleToggleCalendar = useCallback(() => {
-    setIsCalendarOpen((prev) => !prev)
-    setActivePanel(null)
-    setIsAnaOpen(false)
-  }, [])
-
-  const pushToast = useCallback((message: string) => {
-    const id = `t-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+  const pushToast = (message: string) => {
+    const id = `auth-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
     setToasts((prev) => [...prev, { id, message, status: 'entering' }])
     window.setTimeout(() => {
       setToasts((prev) =>
-        prev.map((toast) =>
-          toast.id === id ? { ...toast, status: 'leaving' } : toast,
-        ),
+        prev.map((toast) => (toast.id === id ? { ...toast, status: 'leaving' } : toast)),
       )
       window.setTimeout(() => {
         setToasts((prev) => prev.filter((toast) => toast.id !== id))
       }, 220)
-    }, 4000)
-  }, [])
+    }, 3600)
+  }
 
-  const handleSendMessage = useCallback(
-    (text: string) => {
-      const now = Date.now()
-      const message: ChatMessage = {
-        id: `m-${now}`,
-        senderId: 'you',
-        senderName: session.localName,
-        text,
-        timestamp: now,
-        type: 'text',
-      }
-      setMessages((prev) => [...prev, message])
+  const pushBanner = (message: string) => {
+    setBannerMessage(message)
+    window.setTimeout(() => setBannerMessage(''), 4200)
+  }
 
-      const duration = Math.min(6000, Math.max(3000, text.length * 80))
-      const bubble: SpeechBubble = {
-        id: `b-${now}`,
-        text,
-        createdAt: now,
-        expiresAt: now + duration,
-      }
-      setSpeechBubbles((prev) => [...prev, bubble])
-    },
-    [session.localName],
-  )
+  const startEntryLoading = (message: string, nextView: 'dashboard' | 'workspace' | 'reset') => {
+    setEntryMessage(message)
+    setEntryLoading(true)
+    window.setTimeout(() => {
+      setEntryLoading(false)
+      setView(nextView)
+    }, 3400)
+  }
 
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      const now = Date.now()
-      setSpeechBubbles((prev) => prev.filter((bubble) => bubble.expiresAt > now))
-    }, 250)
-    return () => window.clearInterval(interval)
-  }, [])
+  const toSession = (payload: TokenResponse): AuthSession => ({
+    accessToken: payload.access_token,
+    refreshToken: payload.refresh_token,
+    workspaceId: payload.workspace_id,
+    workspaceName: payload.workspace_name,
+    userId: payload.user_id,
+    userName: payload.user_name,
+    roleName: payload.role_name,
+    permissions: payload.permissions,
+    mustResetPassword: payload.must_reset_password,
+  })
 
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      const nearby = participants.filter(
-        (participant) => participant.nearby && participant.inSameRoom,
-      )
-      if (nearby.length === 0) {
-        setSpeakingIds(new Set())
-        return
-      }
-      const active = nearby[Math.floor(Math.random() * nearby.length)]
-      setSpeakingIds(new Set([active.id]))
-    }, 1800)
-    return () => window.clearInterval(interval)
-  }, [participants])
+  const clearSession = async () => {
+    if (session) {
+      await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: session.refreshToken }),
+      })
+    }
+    window.localStorage.removeItem(STORAGE_KEY)
+    setSession(null)
+    setView('login')
+  }
 
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      const now = Date.now()
-      setEmojiReactions((prev) => prev.filter((item) => now - item.createdAt < 2000))
-    }, 250)
-    return () => window.clearInterval(interval)
-  }, [])
+  const handleLogin = async () => {
+    setLoginStatus('')
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workspace_name: loginForm.workspaceName,
+        username: loginForm.username,
+        password: loginForm.password,
+      }),
+    })
+    if (!response.ok) {
+      const message = await response.text()
+      setLoginStatus(`Login failed: ${message}`)
+      pushToast(`Login failed: ${message}`)
+      return
+    }
+    const data = (await response.json()) as TokenResponse
+    const next = toSession(data)
+    saveSession(next)
+    pushToast(`Welcome back, ${next.userName}.`)
+    pushBanner(`Welcome back, ${next.userName}.`)
+    const nextView = next.mustResetPassword
+      ? 'reset'
+      : next.roleName === 'Owner' || next.roleName === 'Admin'
+        ? 'dashboard'
+        : 'workspace'
+    startEntryLoading('Loading your workspace...', nextView)
+  }
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      pushToast('Alex joined the space')
-    }, 0)
-    return () => window.clearTimeout(timer)
-  }, [pushToast])
+  const handleSignup = async () => {
+    setSignupStatus('')
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/admin-signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workspace_name: signupForm.workspaceName,
+        first_name: signupForm.firstName,
+        last_name: signupForm.lastName,
+        email: signupForm.email,
+        password: signupForm.password,
+      }),
+    })
+    if (!response.ok) {
+      const message = await response.text()
+      setSignupStatus(`Signup failed: ${message}`)
+      pushToast(`Signup failed: ${message}`)
+      return
+    }
+    const data = (await response.json()) as TokenResponse
+    const next = toSession(data)
+    saveSession(next)
+    pushToast(`Workspace created. Welcome ${next.userName}.`)
+    pushBanner(`Workspace created. Welcome ${next.userName}.`)
+    startEntryLoading('Preparing admin dashboard...', 'dashboard')
+  }
+
+  const handleReset = async () => {
+    if (!session) {
+      return
+    }
+    setResetStatus('')
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/${session.workspaceId}/reset-password`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        current_password: resetForm.currentPassword,
+        new_password: resetForm.newPassword,
+      }),
+    })
+    if (!response.ok) {
+      const message = await response.text()
+      setResetStatus(`Reset failed: ${message}`)
+      pushToast(`Reset failed: ${message}`)
+      return
+    }
+    const next = { ...session, mustResetPassword: false }
+    saveSession(next)
+    pushToast('Password updated.')
+    setView(isAdmin ? 'dashboard' : 'workspace')
+  }
+
+  if (entryLoading) {
+    return <LoadingOverlay visible message={entryMessage} variant="entry" />
+  }
+
+  if (session && view === 'workspace') {
+    return (
+      <WorkspaceApp
+        workspaceId={session.workspaceId}
+        userId={session.userId}
+        userName={session.userName}
+        permissions={permissions}
+        bannerMessage={bannerMessage}
+      />
+    )
+  }
+
+  if (session && view === 'dashboard') {
+    return (
+      <AdminDashboard
+        apiBaseUrl={API_BASE_URL}
+        accessToken={session.accessToken}
+        workspaceId={session.workspaceId}
+        workspaceName={session.workspaceName}
+        userName={session.userName}
+        bannerMessage={bannerMessage}
+        onEnterWorkspace={() => setView('workspace')}
+        onLogout={clearSession}
+      />
+    )
+  }
+
+
+  if (session && view === 'reset') {
+    return (
+      <div className="auth-shell min-h-screen bg-[var(--pixel-bg)] px-6 py-10 text-[var(--pixel-ink)]">
+        <NotificationToast toasts={toasts} />
+        <div className="pixel-panel pixel-ui auth-panel mx-auto w-full max-w-md p-6">
+          <div className="text-[10px] uppercase tracking-[0.4em] text-slate-500">Password Reset</div>
+          <h1 className="text-xl font-semibold">Set a new password</h1>
+          <p className="mt-2 text-[10px] text-slate-500">Your account requires a password update before continuing.</p>
+          {resetStatus ? <div className="mt-3 text-[10px] text-red-500">{resetStatus}</div> : null}
+          <div className="mt-4 space-y-3 text-[10px]">
+            <input
+              className="pixel-input w-full px-3 py-2"
+              placeholder="Current password"
+              type="password"
+              value={resetForm.currentPassword}
+              onChange={(event) => setResetForm((prev) => ({ ...prev, currentPassword: event.target.value }))}
+            />
+            <input
+              className="pixel-input w-full px-3 py-2"
+              placeholder="New password"
+              type="password"
+              value={resetForm.newPassword}
+              onChange={(event) => setResetForm((prev) => ({ ...prev, newPassword: event.target.value }))}
+            />
+            <button type="button" className="pixel-button w-full px-3 py-2" onClick={handleReset}>
+              Update password
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-[var(--pixel-bg)] text-[var(--pixel-ink)]">
-      <TopBar
-        roomName={roomName}
-        participantCount={visibleParticipants.length}
-        unreadCount={unreadCount}
-        chatBadgePulse={0}
-        activePanel={activePanel}
-        isMuted={isMuted}
-        onToggleParticipants={handleToggleParticipants}
-        onToggleChat={handleToggleChat}
-        onToggleAna={handleToggleAna}
-        onToggleCalendar={handleToggleCalendar}
-        onEmojiSelect={handleEmojiReaction}
-        onToggleMute={() => setIsMuted((prev) => !prev)}
-        isAnaThinking={ana.isThinking}
-        anaStatus={ana.modelStatus}
-        isAnaOpen={isAnaOpen}
-        isCalendarOpen={isCalendarOpen}
-      />
+    <div className="auth-shell min-h-screen bg-[var(--pixel-bg)] px-6 py-10 text-[var(--pixel-ink)]">
       <NotificationToast toasts={toasts} />
-      <ProximityVoiceOverlay
-        active={!isConferenceRoom}
-        connectedPeers={proximityVoice.connectedPeers}
-        error={proximityVoice.error}
-      />
-      {isConferenceRoom ? (
-        <ConferenceCallOverlay
-          active={isConferenceRoom}
-          localStream={conferenceCall.localStream}
-          remotePeers={conferenceCall.remotePeers}
-          error={conferenceCall.error}
-        />
-      ) : (
-        <VideoOverlay nearbyPeers={nearbyPeers} />
-      )}
-      <GameCanvas
-        onHintChange={setHintText}
-        interaction={interaction}
-        onInteractionChange={setInteraction}
-        isTyping={isTyping}
-        speechBubbles={speechBubbles}
-        emojiReactions={emojiReactions}
-        onParticipantsUpdate={setParticipants}
-        onRoomTransition={handleRoomTransition}
-        onAssetsReady={handleAssetsReady}
-        onVoiceChannelChange={setVoiceLabel}
-        syncedPeers={session.remotePeers}
-        localName={session.localName}
-        localMuted={isMuted}
-        onLocalPresence={session.publishPresence}
-      />
-      <RightSidebar
-        activePanel={activePanel}
-        participants={visibleParticipants}
-        messages={messages}
-        typingIndicator=""
-      />
-      <BottomBar
-        hintText={hintText}
-        voiceLabel={voiceLabel}
-        onSendMessage={handleSendMessage}
-        onTypingChange={setIsTyping}
-      />
-      <InteractionModal
-        interaction={interaction}
-        isClosing={isInteractionClosing}
-        onClose={handleInteractionClose}
-      />
-      <CalendarOverlay
-        open={isCalendarOpen}
-        onClose={() => setIsCalendarOpen(false)}
-        sessionId={session.sessionId}
-        localPeerId={session.localPeerId}
-        onReminder={(event) => {
-          pushToast(`Reminder: ${event.title}`)
-        }}
-      />
-      <AnaOverlay
-        open={isAnaOpen}
-        onClose={() => setIsAnaOpen(false)}
-        messages={ana.messages}
-        thinking={ana.isThinking}
-        providerLabel={ana.providerLabel}
-        onSend={(text) => {
-          void ana.sendMessage(text)
-        }}
-      />
-      <LoadingOverlay visible={isLoading} />
-      {roomTransition !== 'idle' ? (
-        <div
-          className={`room-transition fixed inset-0 z-40 bg-black ${
-            roomTransition === 'in' ? 'room-fade-in' : 'room-fade-out'
-          }`}
-        />
-      ) : null}
+      <div className="pixel-panel pixel-ui auth-panel mx-auto w-full max-w-4xl p-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1fr]">
+          <div className="auth-card">
+            <div className="text-[10px] uppercase tracking-[0.4em] text-slate-500">MetaSpace</div>
+            <h1 className="text-2xl font-semibold">Welcome back</h1>
+            <p className="mt-2 text-[10px] text-slate-500">
+              Employee login uses the workspace name you set on signup.
+            </p>
+            {loginStatus ? <div className="mt-3 text-[10px] text-red-500">{loginStatus}</div> : null}
+            <div className="mt-4 space-y-3 text-[10px]">
+              <input
+                className="pixel-input w-full px-3 py-2"
+                placeholder="Workspace name"
+                value={loginForm.workspaceName}
+                onChange={(event) => setLoginForm((prev) => ({ ...prev, workspaceName: event.target.value }))}
+              />
+              <input
+                className="pixel-input w-full px-3 py-2"
+                placeholder="Username (johndoe)"
+                value={loginForm.username}
+                onChange={(event) => setLoginForm((prev) => ({ ...prev, username: event.target.value }))}
+              />
+              <input
+                className="pixel-input w-full px-3 py-2"
+                placeholder="Password"
+                type="password"
+                value={loginForm.password}
+                onChange={(event) => setLoginForm((prev) => ({ ...prev, password: event.target.value }))}
+              />
+              <button type="button" className="pixel-button w-full px-3 py-2" onClick={handleLogin}>
+                Log in
+              </button>
+            </div>
+          </div>
+
+          <div className="auth-card auth-card--delay">
+            <div className="text-[10px] uppercase tracking-[0.4em] text-slate-500">Admin signup</div>
+            <h2 className="text-xl font-semibold">Create your workspace</h2>
+            <p className="mt-2 text-[10px] text-slate-500">Create a new org workspace for your team.</p>
+            <p className="mt-1 text-[10px] text-slate-500">Org names must be unique.</p>
+            {signupStatus ? <div className="mt-3 text-[10px] text-red-500">{signupStatus}</div> : null}
+            <div className="mt-4 space-y-3 text-[10px]">
+              <input
+                className="pixel-input w-full px-3 py-2"
+                placeholder="Workspace name"
+                value={signupForm.workspaceName}
+                onChange={(event) => setSignupForm((prev) => ({ ...prev, workspaceName: event.target.value }))}
+              />
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                <input
+                  className="pixel-input px-3 py-2"
+                  placeholder="First name"
+                  value={signupForm.firstName}
+                  onChange={(event) => setSignupForm((prev) => ({ ...prev, firstName: event.target.value }))}
+                />
+                <input
+                  className="pixel-input px-3 py-2"
+                  placeholder="Last name"
+                  value={signupForm.lastName}
+                  onChange={(event) => setSignupForm((prev) => ({ ...prev, lastName: event.target.value }))}
+                />
+              </div>
+              <input
+                className="pixel-input w-full px-3 py-2"
+                placeholder="Email"
+                value={signupForm.email}
+                onChange={(event) => setSignupForm((prev) => ({ ...prev, email: event.target.value }))}
+              />
+              <input
+                className="pixel-input w-full px-3 py-2"
+                placeholder="Password"
+                type="password"
+                value={signupForm.password}
+                onChange={(event) => setSignupForm((prev) => ({ ...prev, password: event.target.value }))}
+              />
+              <button type="button" className="pixel-button w-full px-3 py-2" onClick={handleSignup}>
+                Create admin workspace
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

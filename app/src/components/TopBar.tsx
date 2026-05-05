@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 type TopBarProps = {
+  profileName: string
   roomName: string
   participantCount: number
   unreadCount: number
@@ -11,15 +12,22 @@ type TopBarProps = {
   onToggleChat: () => void
   onToggleAna: () => void
   onToggleCalendar: () => void
+  onToggleProjects: () => void
+  onToggleDocs: () => void
+  onToggleCrm: () => void
   onEmojiSelect: (emoji: string) => void
   onToggleMute: () => void
   isAnaThinking: boolean
   anaStatus: 'idle' | 'connecting' | 'ready' | 'fallback'
   isAnaOpen: boolean
   isCalendarOpen: boolean
+  isProjectsOpen: boolean
+  isDocsOpen: boolean
+  isCrmOpen: boolean
 }
 
 export function TopBar({
+  profileName,
   roomName,
   participantCount,
   unreadCount,
@@ -30,16 +38,23 @@ export function TopBar({
   onToggleChat,
   onToggleAna,
   onToggleCalendar,
+  onToggleProjects,
+  onToggleDocs,
+  onToggleCrm,
   onEmojiSelect,
   onToggleMute,
   isAnaThinking,
   anaStatus,
   isAnaOpen,
   isCalendarOpen,
+  isProjectsOpen,
+  isDocsOpen,
+  isCrmOpen,
 }: TopBarProps) {
   const [isEmojiOpen, setIsEmojiOpen] = useState(false)
   const emojiRef = useRef<HTMLDivElement | null>(null)
   const emojis = ['👍', '❤️', '😄', '🙂', '✅']
+  const initial = profileName.trim().slice(0, 1).toUpperCase() || 'G'
 
   useEffect(() => {
     if (!isEmojiOpen) {
@@ -60,8 +75,14 @@ export function TopBar({
   return (
     <div className="pixel-panel pixel-ui fixed left-0 right-0 top-0 z-20 flex h-[56px] items-center justify-between px-4">
       <div className="flex items-center gap-3">
-        <div className="flex h-8 w-8 items-center justify-center border-2 border-[var(--pixel-border)] bg-white text-[10px] text-slate-900">
-          G
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center border-2 border-[var(--pixel-border)] bg-white text-[10px] text-slate-900">
+            {initial}
+          </div>
+          <div className="flex flex-col leading-tight">
+            <span className="text-[9px] text-slate-500">Profile</span>
+            <span className="text-[10px] text-slate-800">{profileName}</span>
+          </div>
         </div>
         <span className="text-[10px] text-slate-800">{roomName}</span>
       </div>
@@ -89,7 +110,7 @@ export function TopBar({
                 <button
                   key={emoji}
                   type="button"
-                  className="pixel-button flex h-9 w-9 items-center justify-center text-[16px]"
+                  className="pixel-button emoji-option flex h-9 w-9 items-center justify-center text-[16px] leading-none normal-case"
                   onClick={() => {
                     onEmojiSelect(emoji)
                     setIsEmojiOpen(false)
@@ -112,6 +133,21 @@ export function TopBar({
           label="Calendar"
           active={isCalendarOpen}
           onClick={onToggleCalendar}
+        />
+        <TopBarButton
+          label="Docs"
+          active={isDocsOpen}
+          onClick={onToggleDocs}
+        />
+        <TopBarButton
+          label="Projects"
+          active={isProjectsOpen}
+          onClick={onToggleProjects}
+        />
+        <TopBarButton
+          label="CRM"
+          active={isCrmOpen}
+          onClick={onToggleCrm}
         />
         <TopBarButton
           label="People"

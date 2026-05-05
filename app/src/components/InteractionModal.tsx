@@ -1,6 +1,7 @@
 import type { WorldObject } from '../canvas/world'
 import { LoungeWhiteboard } from './LoungeWhiteboard'
 import { FileConverter } from './FileConverter'
+import { LibraryPortal } from './LibraryPortal'
 
 type InteractionModalProps = {
   interaction: WorldObject | null
@@ -19,6 +20,8 @@ export function InteractionModal({
     return null
   }
 
+  const isLibrary = interaction.type === 'library'
+
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center">
       <button
@@ -28,7 +31,11 @@ export function InteractionModal({
         onClick={onClose}
       />
       <div
-        className={`relative h-[85vh] w-[90vw] max-w-[900px] rounded-xl border border-white/10 bg-[rgba(15,15,25,0.98)] p-6 text-slate-100 shadow-[0_25px_80px_rgba(0,0,0,0.7)] transition-all ${
+        className={`relative h-[85vh] w-[90vw] max-w-[900px] rounded-xl p-6 shadow-[0_25px_80px_rgba(0,0,0,0.35)] transition-all ${
+          isLibrary
+            ? 'pixel-panel pixel-ui border-[var(--pixel-border)] bg-[var(--pixel-panel)] text-[var(--pixel-ink)]'
+            : 'border border-white/10 bg-[rgba(15,15,25,0.98)] text-slate-100 shadow-[0_25px_80px_rgba(0,0,0,0.7)]'
+        } ${
           isClosing
             ? 'scale-95 opacity-0 duration-150 ease-in'
             : 'scale-100 opacity-100 duration-200 ease-out'
@@ -36,18 +43,26 @@ export function InteractionModal({
       >
         <button
           type="button"
-          className="modal-close absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-lg text-white transition-transform duration-200 hover:rotate-90"
+          className={`modal-close absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-lg transition-transform duration-200 hover:rotate-90 ${
+            isLibrary ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' : 'bg-white/10 text-white'
+          }`}
           aria-label="Close"
           onClick={onClose}
         >
           ×
         </button>
-        <div className="flex h-full flex-col gap-3">
-          <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
+        <div className="flex h-full min-h-0 flex-col gap-3">
+          <p className={`text-sm uppercase tracking-[0.25em] ${isLibrary ? 'text-slate-500' : 'text-slate-400'}`}>
             Interaction
           </p>
           <h2 className="text-2xl font-semibold">{getInteractionTitle(interaction.type)}</h2>
-          <div className="flex-1 rounded-lg border border-white/10 bg-black/30 p-4">
+          <div
+            className={`flex min-h-0 flex-1 rounded-lg p-4 ${
+              isLibrary
+                ? 'pixel-panel border-[var(--pixel-border)] bg-white/80'
+                : 'border border-white/10 bg-black/30'
+            } overflow-hidden`}
+          >
             {renderInteractionBody(interaction.type)}
           </div>
         </div>
@@ -76,6 +91,8 @@ function getInteractionTitle(type: InteractionType) {
       return 'Note'
     case 'game':
       return 'Mini Game'
+    case 'library':
+      return 'Library'
     default:
       return 'Interaction'
   }
@@ -128,6 +145,8 @@ function renderInteractionBody(type: InteractionType) {
           <div className="text-sm">Mini-game coming soon</div>
         </div>
       )
+    case 'library':
+      return <LibraryPortal />
     case 'plant':
       return (
         <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-300">

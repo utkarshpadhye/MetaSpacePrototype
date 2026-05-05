@@ -45,11 +45,17 @@ const DEFAULT_SESSION = 'main-demo'
 const STALE_PEER_MS = 15000
 const HEARTBEAT_MS = 1000
 
-export function useSessionPresence(): UseSessionPresenceResult {
+export function useSessionPresence(displayName?: string): UseSessionPresenceResult {
   const [remotePeers, setRemotePeers] = useState<SessionPeer[]>([])
 
   const localPeerId = useMemo(() => `peer-${crypto.randomUUID().slice(0, 8)}`, [])
-  const localName = useMemo(() => `Guest-${localPeerId.slice(-4)}`, [localPeerId])
+  const localName = useMemo(() => {
+    const trimmed = displayName?.trim()
+    if (trimmed) {
+      return trimmed
+    }
+    return `Guest-${localPeerId.slice(-4)}`
+  }, [displayName, localPeerId])
 
   const sessionId = useMemo(() => {
     const url = new URL(window.location.href)

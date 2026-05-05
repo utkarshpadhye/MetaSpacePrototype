@@ -16,6 +16,7 @@ export type WorldObject = {
     | 'poster'
     | 'note'
     | 'game'
+    | 'library'
   x: number
   y: number
   width: number
@@ -27,6 +28,8 @@ export type WorldObject = {
   targetX?: number
   targetY?: number
   targetRoom?: string
+  requiredPermission?: 'room.pm_access' | 'room.crm_access'
+  lockedHint?: string
 }
 
 export type Room = {
@@ -132,7 +135,7 @@ export const objects: WorldObject[] = [
   {
     id: 'cafeteria-converter',
     type: 'converter',
-    x: 20,
+    x: 17,
     y: 10,
     width: 1,
     height: 1,
@@ -140,6 +143,52 @@ export const objects: WorldObject[] = [
     interactive: true,
     interactRadius: 2,
     zLayer: 'above',
+  },
+  {
+    id: 'library-kiosk',
+    type: 'library',
+    x: 24,
+    y: 10,
+    width: 1,
+    height: 1,
+    tileId: 0,
+    interactive: true,
+    interactRadius: 2,
+    zLayer: 'above',
+  },
+  {
+    id: 'pm-room-door',
+    type: 'door',
+    x: 14,
+    y: 14,
+    width: 1,
+    height: 1,
+    tileId: 0,
+    interactive: true,
+    interactRadius: 1,
+    zLayer: 'above',
+    targetX: 4,
+    targetY: 4,
+    targetRoom: 'PM Room',
+    requiredPermission: 'room.pm_access',
+    lockedHint: 'PM door is locked. Requires room.pm_access.',
+  },
+  {
+    id: 'crm-room-door',
+    type: 'door',
+    x: 15,
+    y: 14,
+    width: 1,
+    height: 1,
+    tileId: 0,
+    interactive: true,
+    interactRadius: 1,
+    zLayer: 'above',
+    targetX: 24,
+    targetY: 4,
+    targetRoom: 'CRM Room',
+    requiredPermission: 'room.crm_access',
+    lockedHint: 'CRM door is locked. Requires room.crm_access.',
   },
 ]
 
@@ -176,7 +225,16 @@ export const sections: Section[] = [
     name: 'Cafeteria',
     x: 12,
     y: 8,
-    width: 17,
+    width: 9,
+    height: 6,
+    voiceMode: 'common',
+  },
+  {
+    id: 'library',
+    name: 'Library',
+    x: 21,
+    y: 8,
+    width: 8,
     height: 6,
     voiceMode: 'common',
   },
@@ -272,10 +330,18 @@ export const decorProps: DecorProp[] = [
   // Cafeteria
   { id: 'cafeteria-rug-main', kind: 'rug-square', x: 19, y: 9, width: 3, height: 3, sectionId: 'cafeteria', zLayer: 'below' },
   { id: 'cafeteria-lamp-left', kind: 'lamp-round-floor', x: 13, y: 9, width: 1, height: 1, sectionId: 'cafeteria', zLayer: 'above' },
-  { id: 'cafeteria-lamp-right', kind: 'lamp-round-floor', x: 27, y: 9, width: 1, height: 1, sectionId: 'cafeteria', zLayer: 'above' },
+  { id: 'cafeteria-lamp-right', kind: 'lamp-round-floor', x: 20, y: 9, width: 1, height: 1, sectionId: 'cafeteria', zLayer: 'above' },
   { id: 'cafeteria-plant-left', kind: 'potted-plant', x: 13, y: 13, width: 1, height: 1, sectionId: 'cafeteria', zLayer: 'above' },
-  { id: 'cafeteria-plant-right', kind: 'potted-plant', x: 27, y: 13, width: 1, height: 1, sectionId: 'cafeteria', zLayer: 'above' },
+  { id: 'cafeteria-plant-right', kind: 'potted-plant', x: 20, y: 13, width: 1, height: 1, sectionId: 'cafeteria', zLayer: 'above' },
   { id: 'cafeteria-workstation', kind: 'chair-desk', x: 15, y: 10, width: 2, height: 1, sectionId: 'cafeteria', zLayer: 'above' },
+
+  // Library
+  { id: 'library-rug-main', kind: 'rug-square', x: 23, y: 9, width: 4, height: 3, sectionId: 'library', zLayer: 'below' },
+  { id: 'library-lamp-left', kind: 'lamp-round-floor', x: 22, y: 9, width: 1, height: 1, sectionId: 'library', zLayer: 'above' },
+  { id: 'library-lamp-right', kind: 'lamp-round-floor', x: 28, y: 9, width: 1, height: 1, sectionId: 'library', zLayer: 'above' },
+  { id: 'library-plant-left', kind: 'potted-plant', x: 22, y: 13, width: 1, height: 1, sectionId: 'library', zLayer: 'above' },
+  { id: 'library-plant-right', kind: 'potted-plant', x: 28, y: 13, width: 1, height: 1, sectionId: 'library', zLayer: 'above' },
+  { id: 'library-workstation', kind: 'chair-desk', x: 25, y: 10, width: 2, height: 1, sectionId: 'library', zLayer: 'above' },
 
   // Conference
   { id: 'conference-rug-main', kind: 'rug-square', x: 5, y: 2, width: 3, height: 3, sectionId: 'conference', zLayer: 'below' },
@@ -328,6 +394,10 @@ export const seats: Seat[] = [
   { id: 'sofa-seat-8', label: 'Lounge Seat 8', x: 5, y: 12, sectionId: 'lounge', channelMode: 'common', channelName: 'Lounge' },
   { id: 'sofa-seat-9', label: 'Lounge Seat 9', x: 6, y: 12, sectionId: 'lounge', channelMode: 'common', channelName: 'Lounge' },
 
+  { id: 'library-seat-1', label: 'Library Seat 1', x: 24, y: 12, sectionId: 'library', channelMode: 'common', channelName: 'Library' },
+  { id: 'library-seat-2', label: 'Library Seat 2', x: 25, y: 12, sectionId: 'library', channelMode: 'common', channelName: 'Library' },
+  { id: 'library-seat-3', label: 'Library Seat 3', x: 26, y: 12, sectionId: 'library', channelMode: 'common', channelName: 'Library' },
+
   { id: 'focus-seat-a', label: 'Focus Room A Desk', x: 2, y: 18, sectionId: 'focus-a', channelMode: 'private', channelName: 'Focus Room A' },
   { id: 'focus-seat-b', label: 'Focus Room B Desk', x: 9, y: 18, sectionId: 'focus-b', channelMode: 'private', channelName: 'Focus Room B' },
   { id: 'focus-seat-c', label: 'Focus Room C Desk', x: 16, y: 18, sectionId: 'focus-c', channelMode: 'private', channelName: 'Focus Room C' },
@@ -369,7 +439,8 @@ const addWallRect = (
 addWallRect(1, 1, 10, 6, { x: 6, y: 6 })
 addWallRect(12, 1, 17, 6, { x: 20, y: 6 })
 addWallRect(1, 8, 9, 6, { x: 5, y: 8 })
-addWallRect(12, 8, 17, 6, { x: 20, y: 8 })
+addWallRect(12, 8, 9, 6, { x: 16, y: 8 })
+addWallRect(21, 8, 8, 6, { x: 24, y: 8 })
 addWallRect(1, 15, 6, 6, { x: 3, y: 15 })
 addWallRect(8, 15, 6, 6, { x: 10, y: 15 })
 addWallRect(15, 15, 6, 6, { x: 17, y: 15 })

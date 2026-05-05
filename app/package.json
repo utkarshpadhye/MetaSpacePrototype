@@ -7,17 +7,29 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "playwright test",
+    "test:perf": "node scripts/perf_baselines.mjs",
+    "test:yjs": "node scripts/yjs_conflict_free_test.mjs"
   },
   "dependencies": {
     "@excalidraw/excalidraw": "^0.18.0",
     "@types/papaparse": "^5.5.2",
+    "@tiptap/extension-collaboration": "^2.14.5",
+    "@tiptap/extension-collaboration-cursor": "^2.14.5",
+    "@tiptap/react": "^2.14.5",
+    "@tiptap/starter-kit": "^2.14.5",
+    "jspdf": "^4.2.1",
     "papaparse": "^5.5.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "y-indexeddb": "^9.0.12",
+    "y-websocket": "^1.5.4",
+    "yjs": "^13.6.15",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@playwright/test": "^1.52.0",
     "@eslint/js": "^9.39.4",
     "@types/node": "^24.12.0",
     "@types/react": "^19.2.14",
