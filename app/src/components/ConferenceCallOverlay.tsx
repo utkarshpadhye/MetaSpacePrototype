@@ -26,6 +26,7 @@ type ConferenceCallOverlayProps = {
   onToggleScreenShare: () => void
   transcripts: ConferenceTranscriptLine[]
   summary: ConferenceSummary
+  summaryProviderLabel: string
   isTranscribing: boolean
   isTranscriptionSupported: boolean
   captionsEnabled: boolean
@@ -48,6 +49,7 @@ export function ConferenceCallOverlay({
   onToggleScreenShare,
   transcripts,
   summary,
+  summaryProviderLabel,
   isTranscribing,
   isTranscriptionSupported,
   captionsEnabled,
@@ -228,7 +230,10 @@ export function ConferenceCallOverlay({
           </div>
         </div>
         <div className="pixel-panel min-h-[160px] p-3 text-[9px] text-slate-700">
-          <div className="mb-2">Meeting Summary</div>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span>Meeting Summary</span>
+            <span className="text-[8px] text-slate-500">{summaryProviderLabel}</span>
+          </div>
           <SummarySection title="Key Points" items={summary.keyPoints} />
           <SummarySection title="Action Items" items={summary.actionItems} />
           <SummarySection title="Decisions" items={summary.decisions} />

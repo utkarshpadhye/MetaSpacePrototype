@@ -9,6 +9,13 @@ export type GeminiSummary = {
   decisions: string[]
 }
 
+export type MeetingSummaryProvider = 'gemini' | 'ollama'
+
+export type MeetingSummaryResult = GeminiSummary & {
+  provider: MeetingSummaryProvider
+  providerLabel: string
+}
+
 type GeminiPart = {
   text?: string
 }
@@ -324,11 +331,21 @@ export async function summarizeMeetingWithOllama(transcript: string) {
 export async function summarizeMeetingWithAi(transcript: string) {
   if (hasGeminiApiKey()) {
     try {
-      return await summarizeMeetingWithGemini(transcript)
+      const summary = await summarizeMeetingWithGemini(transcript)
+      return {
+        ...summary,
+        provider: 'gemini' as const,
+        providerLabel: getGeminiProviderLabel(),
+      } satisfies MeetingSummaryResult
     } catch {
       // Fall through to Ollama when Gemini is unavailable or returns invalid JSON.
     }
   }
 
-  return summarizeMeetingWithOllama(transcript)
+  const summary = await summarizeMeetingWithOllama(transcript)
+  return {
+    ...summary,
+    provider: 'ollama' as const,
+    providerLabel: getOllamaProviderLabel(),
+  } satisfies MeetingSummaryResult
 }

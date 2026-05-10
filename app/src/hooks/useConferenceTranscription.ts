@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   summarizeMeetingWithAi,
   type GeminiSummary,
+  type MeetingSummaryProvider,
 } from '../services/gemini'
 
 export type ConferenceTranscriptLine = {
@@ -17,6 +18,8 @@ export type ConferenceSummary = {
   actionItems: string[]
   decisions: string[]
 }
+
+export type ConferenceSummarySource = MeetingSummaryProvider | 'local'
 
 type SharedTranscriptPayload = {
   type: 'conference-transcript'
@@ -37,6 +40,8 @@ type UseConferenceTranscriptionProps = {
 type UseConferenceTranscriptionResult = {
   transcripts: ConferenceTranscriptLine[]
   summary: ConferenceSummary
+  summarySource: ConferenceSummarySource
+  summaryProviderLabel: string
   error: string | null
   isTranscribing: boolean
   isSupported: boolean
@@ -331,6 +336,8 @@ export function useConferenceTranscription({
   const lastTextAtRef = useRef(0)
   const seenIdsRef = useRef<Set<string>>(new Set())
   const [geminiSummary, setGeminiSummary] = useState<GeminiSummary | null>(null)
+  const [summarySource, setSummarySource] = useState<ConferenceSummarySource>('local')
+  const [summaryProviderLabel, setSummaryProviderLabel] = useState('Local heuristic')
 
   const audioContextCtor = getAudioContextConstructor()
   const isSupported =
@@ -661,6 +668,8 @@ export function useConferenceTranscription({
     seenIdsRef.current.clear()
     setTranscripts([])
     setGeminiSummary(null)
+    setSummarySource('local')
+    setSummaryProviderLabel('Local heuristic')
   }, [])
 
   const fallbackSummary = useMemo(() => summarizeTranscript(transcripts), [transcripts])
@@ -668,6 +677,8 @@ export function useConferenceTranscription({
   useEffect(() => {
     if (transcripts.length === 0) {
       setGeminiSummary(null)
+      setSummarySource('local')
+      setSummaryProviderLabel('Local heuristic')
       return
     }
 
@@ -678,6 +689,8 @@ export function useConferenceTranscription({
 
     if (transcriptText.trim().length < 120) {
       setGeminiSummary(null)
+      setSummarySource('local')
+      setSummaryProviderLabel('Local heuristic')
       return
     }
 
@@ -687,11 +700,15 @@ export function useConferenceTranscription({
         .then((nextSummary) => {
           if (!cancelled) {
             setGeminiSummary(nextSummary)
+            setSummarySource(nextSummary.provider)
+            setSummaryProviderLabel(nextSummary.providerLabel)
           }
         })
         .catch(() => {
           if (!cancelled) {
             setGeminiSummary(null)
+            setSummarySource('local')
+            setSummaryProviderLabel('Local heuristic')
           }
         })
     }, 1200)
@@ -707,6 +724,8 @@ export function useConferenceTranscription({
   return {
     transcripts,
     summary,
+    summarySource,
+    summaryProviderLabel,
     error,
     isTranscribing,
     isSupported,

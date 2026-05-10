@@ -521,6 +521,7 @@ function WorkspaceApp({ workspaceId, userId, userName, permissions, bannerMessag
           }}
           transcripts={conferenceTranscription.transcripts}
           summary={conferenceTranscription.summary}
+          summaryProviderLabel={conferenceTranscription.summaryProviderLabel}
           isTranscribing={conferenceTranscription.isTranscribing}
           isTranscriptionSupported={conferenceTranscription.isSupported}
           captionsEnabled={conferenceTranscription.captionsEnabled}
