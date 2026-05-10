@@ -113,9 +113,11 @@ In `app/.env`:
 ```bash
 VITE_GEMINI_API_KEY=your_api_key_here
 VITE_GEMINI_MODEL=gemini-2.5-flash
+VITE_OLLAMA_MODEL=llama3.2
+VITE_OLLAMA_ENDPOINT=http://127.0.0.1:11434/api/generate
 ```
 
-Ana and conference summaries fall back gracefully when the key is absent.
+Ana falls back to simple local replies when Gemini is absent. Conference summaries try Gemini first, then local Ollama when available, then the browser heuristic fallback.
 
 ## Optional: Sprite Utility Script
 

@@ -58,9 +58,11 @@ export function useNotifications({ apiBaseUrl, workspaceId, userId, enabled }: U
         }
         const data = (await response.json()) as NotificationItem[]
         ingest(data)
+        return true
       } catch {
         // Polling fallback should stay silent in local demo mode.
       }
+      return false
     }
 
     const openWs = () => {
@@ -87,11 +89,14 @@ export function useNotifications({ apiBaseUrl, workspaceId, userId, enabled }: U
       }
     }
 
-    void poll()
+    void poll().then((ok) => {
+      if (ok) {
+        openWs()
+      }
+    })
     const interval = window.setInterval(() => {
       void poll()
     }, 15000)
-    openWs()
 
     return () => {
       window.clearInterval(interval)

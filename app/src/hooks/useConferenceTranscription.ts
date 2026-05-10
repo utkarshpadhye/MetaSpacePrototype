@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  hasGeminiApiKey,
-  summarizeMeetingWithGemini,
+  summarizeMeetingWithAi,
   type GeminiSummary,
 } from '../services/gemini'
 
@@ -54,8 +53,9 @@ const MIN_CAPTURE_SECONDS = 1.0
 const CARRY_SECONDS = 0.35
 
 const actionPattern =
-  /\b(action|todo|follow up|follow-up|next step|need to|should|let's|assign)\b/i
-const decisionPattern = /\b(decide|decision|agreed|final|approved|we will)\b/i
+  /\b(action|todo|follow up|follow-up|next step|need to|needs to|should|let's|assign|owner|by tomorrow|by monday|by tuesday|by wednesday|by thursday|by friday|due)\b/i
+const decisionPattern =
+  /\b(we decided|decided|decision|agreed|agreement|approved|final|finalized|confirmed|we will|we are going to|let's go with|locked)\b/i
 
 function getAudioContextConstructor() {
   if (typeof window === 'undefined') {
@@ -268,7 +268,7 @@ function joinTranscriptText(base: string, addition: string) {
 function summarizeTranscript(lines: ConferenceTranscriptLine[]): ConferenceSummary {
   const recent = lines.slice(-120)
   const sentenceSet = new Set<string>()
-  const sentences: string[] = []
+  const keyPoints: string[] = []
   const actionItems: string[] = []
   const decisions: string[] = []
 
@@ -278,17 +278,10 @@ function summarizeTranscript(lines: ConferenceTranscriptLine[]): ConferenceSumma
       continue
     }
 
-    if (actionPattern.test(normalized)) {
-      actionItems.push(`${line.speaker}: ${normalized}`)
-    }
-    if (decisionPattern.test(normalized)) {
-      decisions.push(`${line.speaker}: ${normalized}`)
-    }
-
     const parts = normalized
       .split(/(?<=[.!?])\s+/)
       .map((part) => part.trim())
-      .filter((part) => part.length >= 25)
+      .filter((part) => part.length >= 18)
 
     for (const part of parts) {
       const key = part.toLowerCase()
@@ -296,12 +289,20 @@ function summarizeTranscript(lines: ConferenceTranscriptLine[]): ConferenceSumma
         continue
       }
       sentenceSet.add(key)
-      sentences.push(part)
+
+      const item = `${line.speaker}: ${part}`
+      if (decisionPattern.test(part)) {
+        decisions.push(item)
+      } else if (actionPattern.test(part)) {
+        actionItems.push(item)
+      } else {
+        keyPoints.push(part)
+      }
     }
   }
 
   return {
-    keyPoints: sentences.slice(-4),
+    keyPoints: keyPoints.slice(-4),
     actionItems: actionItems.slice(-4),
     decisions: decisions.slice(-4),
   }
@@ -675,14 +676,14 @@ export function useConferenceTranscription({
       .map((line) => `${line.speaker}: ${line.text}`)
       .join('\n')
 
-    if (!hasGeminiApiKey() || transcriptText.trim().length < 120) {
+    if (transcriptText.trim().length < 120) {
       setGeminiSummary(null)
       return
     }
 
     let cancelled = false
     const timeout = window.setTimeout(() => {
-      summarizeMeetingWithGemini(transcriptText)
+      summarizeMeetingWithAi(transcriptText)
         .then((nextSummary) => {
           if (!cancelled) {
             setGeminiSummary(nextSummary)

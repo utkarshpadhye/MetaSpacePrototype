@@ -29,6 +29,9 @@ const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ''
 const GEMINI_ENDPOINT =
   import.meta.env.VITE_GEMINI_ENDPOINT ||
   `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
+const OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL || 'llama3.2'
+const OLLAMA_ENDPOINT =
+  import.meta.env.VITE_OLLAMA_ENDPOINT || 'http://127.0.0.1:11434/api/generate'
 
 export function hasGeminiApiKey() {
   return GEMINI_API_KEY.trim().length > 0
@@ -128,26 +131,38 @@ function normalizeList(value: unknown) {
     .slice(0, 5)
 }
 
-export async function summarizeMeetingWithGemini(transcript: string) {
-  const prompt = `Summarize this meeting transcript for a project workspace.
+function buildMeetingSummaryPrompt(transcript: string) {
+  return `You are producing meeting intelligence for a software project workspace.
 
-Return only valid JSON with this exact shape:
+Read the transcript and return ONLY valid JSON with this exact shape:
+
 {
   "keyPoints": ["..."],
   "actionItems": ["..."],
   "decisions": ["..."]
 }
 
-Keep each item concise. Use empty arrays when the transcript does not contain that category.
+Rules:
+- keyPoints must be synthesized themes or outcomes, not copied transcript sentences.
+- actionItems must only include explicit work to do after the meeting. Prefer "Owner: task (due: date)" when an owner or due date is present. If no owner is clear, write the task without inventing one.
+- decisions must only include explicit agreements, approvals, final choices, commitments, or "we will..." statements.
+- Do not move ordinary discussion into actionItems or decisions.
+- Use empty arrays when the transcript does not contain that category.
+- Keep each item under 22 words.
+- Return at most 5 keyPoints, 5 actionItems, and 5 decisions.
 
 Transcript:
 ${transcript}`
+}
+
+export async function summarizeMeetingWithGemini(transcript: string) {
+  const prompt = buildMeetingSummaryPrompt(transcript)
 
   const response = await requestGemini(prompt, [
     {
       role: 'system',
       text:
-        'You summarize meetings for MetaSpace. Be accurate, concise, and do not invent decisions or action items.',
+        'You summarize meetings for MetaSpace. Extract only evidence-backed summaries, actions, and decisions. Never invent missing owners, due dates, or decisions.',
     },
   ])
   const parsed = parseJsonObject(response)
@@ -159,4 +174,50 @@ ${transcript}`
     actionItems: normalizeList(parsed.actionItems),
     decisions: normalizeList(parsed.decisions),
   }
+}
+
+export async function summarizeMeetingWithOllama(transcript: string) {
+  const response = await fetch(OLLAMA_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: OLLAMA_MODEL,
+      prompt: buildMeetingSummaryPrompt(transcript),
+      stream: false,
+      options: {
+        temperature: 0.1,
+        num_predict: 700,
+      },
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Ollama request failed: ${response.status}`)
+  }
+
+  const payload = (await response.json()) as { response?: string; error?: string }
+  if (payload.error) {
+    throw new Error(payload.error)
+  }
+  const parsed = parseJsonObject(payload.response ?? '')
+  if (!parsed) {
+    throw new Error('Ollama summary was not valid JSON')
+  }
+  return {
+    keyPoints: normalizeList(parsed.keyPoints),
+    actionItems: normalizeList(parsed.actionItems),
+    decisions: normalizeList(parsed.decisions),
+  }
+}
+
+export async function summarizeMeetingWithAi(transcript: string) {
+  if (hasGeminiApiKey()) {
+    try {
+      return await summarizeMeetingWithGemini(transcript)
+    } catch {
+      // Fall through to Ollama when Gemini is unavailable or returns invalid JSON.
+    }
+  }
+
+  return summarizeMeetingWithOllama(transcript)
 }

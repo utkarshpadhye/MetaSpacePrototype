@@ -36,12 +36,97 @@ type AuthToast = {
 
 const API_BASE_URL = 'http://127.0.0.1:8787'
 const STORAGE_KEY = 'metaspace-auth'
+const DEMO_ADMIN_USERNAMES = new Set(['abc'])
+const DEMO_ADMIN_PERMISSIONS = [
+  'workspace.settings.view',
+  'workspace.settings.edit',
+  'workspace.members.invite',
+  'workspace.members.remove',
+  'workspace.members.view',
+  'workspace.roles.create',
+  'workspace.roles.edit',
+  'workspace.roles.delete',
+  'workspace.roles.assign',
+  'room.pm_access',
+  'room.crm_access',
+  'project.create',
+  'project.view',
+  'project.edit',
+  'project.delete',
+  'project.archive',
+  'project.members.add',
+  'project.members.remove',
+  'sprint.view',
+  'sprint.create',
+  'sprint.manage',
+  'sprint.delete',
+  'task.create',
+  'task.create_personal',
+  'task.view',
+  'task.edit_own',
+  'task.edit_any',
+  'task.assign_others',
+  'task.delete',
+  'task.log_time',
+  'task.manage_status_columns',
+  'milestone.view',
+  'milestone.create',
+  'milestone.edit',
+  'milestone.delete',
+  'doc.view',
+  'doc.create',
+  'doc.edit',
+  'doc.delete',
+  'doc.view_private',
+  'doc.manage_access',
+  'doc.approve',
+  'doc.templates.view',
+  'doc.templates.manage',
+  'crm.view',
+  'crm.edit',
+  'crm.delete',
+  'crm.deals.view',
+  'crm.deals.edit',
+  'crm.deals.delete',
+  'crm.deals.convert',
+  'crm.pipeline.manage',
+  'crm.interactions.view',
+  'crm.interactions.create',
+  'crm.reports.view',
+  'notification.view_all',
+]
+
+function normalizeDemoSession(payload: AuthSession): AuthSession {
+  const identity = `${payload.userName} ${payload.roleName}`.toLowerCase()
+  const isDemoAdmin = Array.from(DEMO_ADMIN_USERNAMES).some((name) =>
+    identity.split(/\s+/).includes(name),
+  )
+  if (!isDemoAdmin) {
+    return payload
+  }
+
+  const permissions = Array.from(new Set([...payload.permissions, ...DEMO_ADMIN_PERMISSIONS])).sort()
+  return { ...payload, permissions }
+}
+
+function readStoredSession() {
+  const raw = window.localStorage.getItem(STORAGE_KEY)
+  if (!raw) {
+    return null
+  }
+
+  try {
+    const normalized = normalizeDemoSession(JSON.parse(raw) as AuthSession)
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
+    return normalized
+  } catch {
+    window.localStorage.removeItem(STORAGE_KEY)
+    return null
+  }
+}
 
 function App() {
-  const [session, setSession] = useState<AuthSession | null>(() => {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as AuthSession) : null
-  })
+  const [session, setSession] = useState<AuthSession | null>(() => readStoredSession())
   const [view, setView] = useState<'login' | 'signup' | 'reset' | 'dashboard' | 'workspace'>(() => {
     if (!session) {
       return 'login'
@@ -72,8 +157,9 @@ function App() {
   const permissions = useMemo(() => new Set<string>(session?.permissions ?? []), [session])
 
   const saveSession = (payload: AuthSession) => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
-    setSession(payload)
+    const normalized = normalizeDemoSession(payload)
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
+    setSession(normalized)
   }
 
   const pushToast = (message: string) => {
