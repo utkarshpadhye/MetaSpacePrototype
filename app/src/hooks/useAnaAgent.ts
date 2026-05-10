@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { askGemini, getGeminiProviderLabel, hasGeminiApiKey, type GeminiChatMessage } from '../services/gemini'
+import {
+  askAnaWithAi,
+  getGeminiProviderLabel,
+  getOllamaProviderLabel,
+  hasGeminiApiKey,
+  type GeminiChatMessage,
+} from '../services/gemini'
 
 export type AnaMessage = {
   id: string
@@ -62,7 +68,7 @@ function localRuleReply(input: string) {
     return `Result: ${mathValue}`
   }
   if (/(hello|hi|hey)\b/.test(lower)) {
-    return 'Hi, I am Ana. Add a Gemini API key to enable richer workspace answers.'
+    return 'Hi, I am Ana. I tried Gemini/Ollama but could not reach a model, so I am in minimal local mode.'
   }
   if (/(time|current time)/.test(lower)) {
     return `Local time: ${new Date().toLocaleTimeString()}`
@@ -76,9 +82,9 @@ function localRuleReply(input: string) {
     })}.`
   }
   if (/(help|what can you do)/.test(lower)) {
-    return 'I can answer through Gemini when VITE_GEMINI_API_KEY is configured. Without it, I can still handle basic local help, date, time, and calculations.'
+    return 'I normally answer through Gemini or local Ollama. Right now both model calls failed, so I can only handle basic date, time, help, and calculations.'
   }
-  return 'Gemini is not configured or unavailable right now. I can still help with basic local commands and simple calculations.'
+  return 'Gemini and local Ollama are unavailable right now. Check VITE_GEMINI_API_KEY or run/pull the configured Ollama model.'
 }
 
 function buildGeminiHistory(messages: AnaMessage[]): GeminiChatMessage[] {
@@ -124,8 +130,8 @@ export function useAnaAgent(): UseAnaAgentResult {
   const prepareModel = useCallback(async () => {
     if (!hasGeminiApiKey()) {
       setModelStatus('fallback')
-      setProviderLabel('Local fallback (Gemini key missing)')
-      return null
+      setProviderLabel(getOllamaProviderLabel())
+      return 'ollama'
     }
 
     setModelStatus('ready')
@@ -161,23 +167,25 @@ export function useAnaAgent(): UseAnaAgentResult {
     let nextLabel = getGeminiProviderLabel()
 
     try {
-      if (hasGeminiApiKey()) {
-        setModelStatus('connecting')
-        setProviderLabel('Gemini (thinking)')
-        finalText = await askGemini(clean, buildGeminiHistory(messagesRef.current))
-        nextStatus = 'ready'
-        nextLabel = getGeminiProviderLabel()
-      }
-    } catch {
+      setModelStatus('connecting')
+      setProviderLabel(hasGeminiApiKey() ? 'Gemini / Ollama (thinking)' : 'Ollama (thinking)')
+      const result = await askAnaWithAi(clean, buildGeminiHistory(messagesRef.current))
+      finalText = result.text
+      nextStatus = result.status
+      nextLabel = result.providerLabel
+    } catch (error) {
       finalText = localRuleReply(clean)
       nextStatus = 'fallback'
-      nextLabel = 'Local fallback (Gemini unavailable)'
+      nextLabel =
+        error instanceof Error
+          ? `Minimal fallback (${error.message})`
+          : 'Minimal fallback (AI unavailable)'
     }
 
     if (!finalText.trim()) {
       finalText = localRuleReply(clean)
       nextStatus = 'fallback'
-      nextLabel = 'Local fallback (Gemini unavailable)'
+      nextLabel = 'Minimal fallback (AI unavailable)'
     }
 
     let streamedText = ''

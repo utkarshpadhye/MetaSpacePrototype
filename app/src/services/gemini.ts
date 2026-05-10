@@ -32,13 +32,18 @@ const GEMINI_ENDPOINT =
 const OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL || 'llama3.2'
 const OLLAMA_ENDPOINT =
   import.meta.env.VITE_OLLAMA_ENDPOINT || 'http://127.0.0.1:11434/api/generate'
+const OLLAMA_TAGS_ENDPOINT = OLLAMA_ENDPOINT.replace(/\/api\/(?:generate|chat).*$/, '/api/tags')
 
 export function hasGeminiApiKey() {
   return GEMINI_API_KEY.trim().length > 0
 }
 
 export function getGeminiProviderLabel() {
-  return hasGeminiApiKey() ? `Gemini (${GEMINI_MODEL})` : 'Local fallback (Gemini key missing)'
+  return hasGeminiApiKey() ? `Gemini (${GEMINI_MODEL})` : `Ollama (${OLLAMA_MODEL})`
+}
+
+export function getOllamaProviderLabel(model = OLLAMA_MODEL) {
+  return `Ollama (${model})`
 }
 
 function toGeminiRole(role: GeminiChatMessage['role']) {
@@ -101,6 +106,108 @@ export async function askGemini(
   history: GeminiChatMessage[] = [],
 ) {
   return requestGemini(prompt, history)
+}
+
+type OllamaTagsResponse = {
+  models?: Array<{
+    name?: string
+    model?: string
+  }>
+}
+
+type OllamaGenerateResponse = {
+  response?: string
+  error?: string
+}
+
+let resolvedOllamaModel: string | null = null
+
+function toOllamaPrompt(prompt: string, history: GeminiChatMessage[] = []) {
+  const system = history
+    .filter((message) => message.role === 'system')
+    .map((message) => message.text.trim())
+    .filter(Boolean)
+    .join('\n\n')
+  const turns = history
+    .filter((message) => message.role !== 'system' && message.text.trim())
+    .map((message) => `${message.role === 'assistant' ? 'Assistant' : 'User'}: ${message.text.trim()}`)
+    .join('\n')
+
+  return `${system ? `System: ${system}\n\n` : ''}${turns ? `${turns}\n` : ''}User: ${prompt.trim()}\nAssistant:`
+}
+
+async function resolveOllamaModel() {
+  if (resolvedOllamaModel) {
+    return resolvedOllamaModel
+  }
+
+  try {
+    const response = await fetch(OLLAMA_TAGS_ENDPOINT)
+    if (response.ok) {
+      const payload = (await response.json()) as OllamaTagsResponse
+      const names = (payload.models ?? [])
+        .map((model) => model.name || model.model || '')
+        .filter(Boolean)
+      const exact = names.find((name) => name === OLLAMA_MODEL)
+      const latest = names.find((name) => name === `${OLLAMA_MODEL}:latest`)
+      resolvedOllamaModel = exact || latest || names[0] || OLLAMA_MODEL
+      return resolvedOllamaModel
+    }
+  } catch {
+    // Some local Ollama builds/configurations do not expose tags to the browser.
+  }
+
+  resolvedOllamaModel = OLLAMA_MODEL
+  return resolvedOllamaModel
+}
+
+export async function askOllama(prompt: string, history: GeminiChatMessage[] = []) {
+  const model = await resolveOllamaModel()
+  const response = await fetch(OLLAMA_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      prompt: toOllamaPrompt(prompt, history),
+      stream: false,
+      options: {
+        temperature: 0.25,
+        num_predict: 700,
+      },
+    }),
+  })
+
+  const payload = (await response.json().catch(() => ({}))) as OllamaGenerateResponse
+  if (!response.ok) {
+    const detail =
+      response.status === 404
+        ? `Ollama model "${model}" was not found. Pull it with: ollama pull ${model}`
+        : payload.error || `Ollama request failed: ${response.status}`
+    throw new Error(detail)
+  }
+  if (payload.error) {
+    throw new Error(payload.error)
+  }
+
+  const text = (payload.response ?? '').trim()
+  if (!text) {
+    throw new Error('Ollama returned an empty response')
+  }
+  return { text, model }
+}
+
+export async function askAnaWithAi(prompt: string, history: GeminiChatMessage[] = []) {
+  if (hasGeminiApiKey()) {
+    try {
+      const text = await askGemini(prompt, history)
+      return { text, providerLabel: getGeminiProviderLabel(), status: 'ready' as const }
+    } catch {
+      // Gemini is preferred, but Ana must keep working through local Ollama.
+    }
+  }
+
+  const { text, model } = await askOllama(prompt, history)
+  return { text, providerLabel: getOllamaProviderLabel(model), status: 'fallback' as const }
 }
 
 function parseJsonObject(raw: string) {
@@ -177,11 +284,12 @@ export async function summarizeMeetingWithGemini(transcript: string) {
 }
 
 export async function summarizeMeetingWithOllama(transcript: string) {
+  const model = await resolveOllamaModel()
   const response = await fetch(OLLAMA_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: OLLAMA_MODEL,
+      model,
       prompt: buildMeetingSummaryPrompt(transcript),
       stream: false,
       options: {
@@ -191,11 +299,14 @@ export async function summarizeMeetingWithOllama(transcript: string) {
     }),
   })
 
+  const payload = (await response.json().catch(() => ({}))) as { response?: string; error?: string }
   if (!response.ok) {
-    throw new Error(`Ollama request failed: ${response.status}`)
+    throw new Error(
+      response.status === 404
+        ? `Ollama model "${model}" was not found. Pull it with: ollama pull ${model}`
+        : payload.error || `Ollama request failed: ${response.status}`,
+    )
   }
-
-  const payload = (await response.json()) as { response?: string; error?: string }
   if (payload.error) {
     throw new Error(payload.error)
   }

@@ -1,0 +1,241 @@
+
+<style>
+  #legend { display:flex; gap:16px; padding: 0.75rem 0; font-size:12px; color:var(--color-text-secondary); align-items:center; flex-wrap:wrap; }
+  .legend-box { width:14px; height:14px; border-radius:2px; display:inline-block; margin-right:4px; vertical-align:middle; }
+  #matrix-wrap { overflow:auto; max-height:540px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md); }
+  #matrix-wrap table { border-collapse:collapse; font-size:9px; font-family:var(--font-mono); }
+  #matrix-wrap td { width:16px; height:16px; text-align:center; line-height:16px; border:0.5px solid rgba(128,128,128,0.07); cursor:pointer; user-select:none; }
+  td.wall { background:#444441; color:#D3D1C7; }
+  td.free { background:var(--color-background-primary); color:var(--color-text-secondary); }
+  td.door { background:#5DCAA5; color:#04342C; }
+  td.row-label, td.col-label { background:var(--color-background-secondary); color:var(--color-text-secondary); font-size:8px; width:16px; cursor:default; border:none; }
+  #info { font-size:12px; color:var(--color-text-secondary); padding:0.25rem 0; }
+</style>
+
+<h2 class="sr-only">Interactive 53×30 obstacle matrix for the office floor plan. Walls=1, Free=0, Doors=D.</h2>
+
+<div id="legend">
+  <span><span class="legend-box" style="background:#444441;"></span>Wall = 1</span>
+  <span><span class="legend-box" style="background:var(--color-background-primary); border:0.5px solid var(--color-border-tertiary);"></span>Free = 0</span>
+  <span><span class="legend-box" style="background:#5DCAA5;"></span>Door = D</span>
+  <span style="margin-left:auto; font-size:12px;">Click to toggle wall → door → free</span>
+</div>
+
+<div id="matrix-wrap">
+  <table id="grid"></table>
+</div>
+
+<div id="info"></div>
+
+<div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+  <button onclick="exportMatrix()">Export as text ↗</button>
+  <button onclick="exportJSON()">Export as JSON ↗</button>
+  <button onclick="resetMatrix()">Reset to original</button>
+</div>
+
+<pre id="export-out" style="display:none; font-size:10px; font-family:var(--font-mono); background:var(--color-background-secondary); padding:1rem; border-radius:var(--border-radius-md); overflow:auto; max-height:220px; margin-top:10px;"></pre>
+
+<script>
+const COLS = 53;
+const ROWS = 30;
+const W = 1, F = 0, D = 2;
+
+// 53 x 30 obstacle matrix
+// Layout (col ranges approximate):
+//   cols 0-3   : left private offices column (6 rooms across 30 rows)
+//   cols 4-48  : interior (top rooms, open workspace, bottom rooms)
+//   cols 49-52 : right private offices column
+//
+// Row bands:
+//   0        : top outer wall
+//   1-6      : top rooms (conference, lounge, cafe/bar, library)
+//   7        : wall dividing top rooms from workspace / corridor
+//   8-20     : open office workspace (with left/right office walls)
+//   21       : wall dividing workspace from bottom rooms
+//   22-28    : bottom rooms (lounge-left, reception center, break room-right)
+//   29       : bottom outer wall
+
+function makeRow(vals) { return vals; }
+
+// Build the matrix programmatically for precision
+const matrix = [];
+
+for (let r = 0; r < ROWS; r++) {
+  const row = [];
+  for (let c = 0; c < COLS; c++) {
+    row.push(F);
+  }
+  matrix.push(row);
+}
+
+function setRange(r, c1, c2, val) {
+  for (let c = c1; c <= c2; c++) matrix[r][c] = val;
+}
+function setCol(c, r1, r2, val) {
+  for (let r = r1; r <= r2; r++) matrix[r][c] = val;
+}
+function setCell(r, c, val) { matrix[r][c] = val; }
+
+// ── Outer perimeter walls ──
+setRange(0,  0, 52, W);   // top wall
+setRange(29, 0, 52, W);   // bottom wall
+setCol(0,  0, 29, W);     // left wall
+setCol(52, 0, 29, W);     // right wall
+
+// ── Left private office column  (col 0-3) ──
+// Vertical divider between left offices and main interior
+setCol(3, 0, 29, W);
+
+// Horizontal dividers for 6 left offices (rows ~0,5,10,15,20,25,29)
+// offices at rows: 0-4, 5-9, 10-14, 15-19, 20-24, 25-29
+const leftOfficeRows = [5, 10, 15, 20, 25];
+for (const r of leftOfficeRows) {
+  setRange(r, 0, 3, W);
+}
+// Doors into left offices (col 3, middle of each room)
+const leftDoorRows = [2, 7, 12, 17, 22, 27];
+for (const r of leftDoorRows) {
+  setCell(r, 3, D);
+}
+
+// ── Right private office column (col 49-52) ──
+setCol(49, 0, 29, W);
+const rightOfficeRows = [5, 10, 15, 20, 25];
+for (const r of rightOfficeRows) {
+  setRange(r, 49, 52, W);
+}
+const rightDoorRows = [2, 7, 12, 17, 22, 27];
+for (const r of rightDoorRows) {
+  setCell(r, 49, D);
+}
+
+// ── Top rooms row (rows 0-7, cols 4-48) ──
+// Horizontal wall at row 7 (floor of top rooms)
+setRange(7, 4, 48, W);
+// Doors from top rooms into corridor
+setCell(7, 10, D); // conference room door
+setCell(7, 22, D); // lounge door
+setCell(7, 33, D); // cafe door
+setCell(7, 44, D); // library door
+
+// Vertical walls between top rooms
+// conference | lounge boundary ~col 16
+setCol(16, 0, 7, W);
+setCell(4, 16, D); // internal passage
+
+// lounge | cafe boundary ~col 28
+setCol(28, 0, 7, W);
+setCell(4, 28, D);
+
+// cafe | library boundary ~col 40
+setCol(40, 0, 7, W);
+setCell(4, 40, D);
+
+// ── Open office workspace (rows 8-20, cols 4-48) ──
+// No internal walls — fully open
+// But there's a small server/utility bump around cols 11-14, rows 7-9
+setRange(8, 4, 48, F); // already free, just confirming
+
+// ── Horizontal wall dividing workspace from bottom rooms (row 21) ──
+setRange(21, 4, 48, W);
+// Doors in that wall
+setCell(21, 8,  D); // left bottom room door
+setCell(21, 34, D); // right bottom room door
+// Reception opening is wider (cols 20-32 open)
+for (let c = 20; c <= 32; c++) setCell(21, c, F);
+
+// ── Bottom rooms (rows 22-28, cols 4-48) ──
+// Left bottom room (lounge) col 4-16
+setCol(16, 21, 29, W);
+setCell(24, 16, D);
+
+// Right bottom room (break room) col 34-48
+setCol(34, 21, 29, W);
+setCell(24, 34, D);
+
+// Reception desk area (cols 17-33) open in center, no extra walls
+
+// ── Main entrance at bottom center (row 29 has gap) ──
+setCell(29, 22, D);
+setCell(29, 23, D);
+setCell(29, 24, D);
+setCell(29, 25, D);
+setCell(29, 26, D);
+setCell(29, 27, D);
+setCell(29, 28, D);
+setCell(29, 29, D);
+setCell(29, 30, D);
+
+// snapshot for reset
+const original = matrix.map(r => [...r]);
+
+const cellLabels = [' ', '1', 'D'];
+const cellClass  = ['free','wall','door'];
+
+function buildTable() {
+  const tbl = document.getElementById('grid');
+  tbl.innerHTML = '';
+
+  const hrow = document.createElement('tr');
+  const corner = document.createElement('td'); corner.className='col-label'; hrow.appendChild(corner);
+  for (let c = 0; c < COLS; c++) {
+    const th = document.createElement('td'); th.className='col-label';
+    th.textContent = c % 5 === 0 ? c : '';
+    hrow.appendChild(th);
+  }
+  tbl.appendChild(hrow);
+
+  for (let r = 0; r < ROWS; r++) {
+    const tr = document.createElement('tr');
+    const rl = document.createElement('td'); rl.className='row-label'; rl.textContent = r;
+    tr.appendChild(rl);
+    for (let c = 0; c < COLS; c++) {
+      const td = document.createElement('td');
+      const val = matrix[r][c];
+      td.className = cellClass[val];
+      td.textContent = val === F ? '' : cellLabels[val];
+      td.title = `(${c}, ${r})`;
+      td.addEventListener('click', () => {
+        const cur = matrix[r][c];
+        const next = cur === F ? W : cur === W ? D : F;
+        matrix[r][c] = next;
+        td.className = cellClass[next];
+        td.textContent = next === F ? '' : cellLabels[next];
+        updateInfo();
+      });
+      tr.appendChild(td);
+    }
+    tbl.appendChild(tr);
+  }
+  updateInfo();
+}
+
+function updateInfo() {
+  const flat = matrix.flat();
+  const walls = flat.filter(v=>v===W).length;
+  const doors = flat.filter(v=>v===D).length;
+  const free  = flat.filter(v=>v===F).length;
+  document.getElementById('info').textContent =
+    `Cells — Walls: ${walls}  |  Doors: ${doors}  |  Free: ${free}  |  Total: ${ROWS*COLS}`;
+}
+
+function exportMatrix() {
+  const out = matrix.map(row => row.map(v => v===D?'D':v).join(' ')).join('\n');
+  const el = document.getElementById('export-out');
+  el.textContent = out; el.style.display='block';
+}
+
+function exportJSON() {
+  const obj = { cols:COLS, rows:ROWS, legend:{0:'free',1:'wall',2:'door'}, matrix };
+  const el = document.getElementById('export-out');
+  el.textContent = JSON.stringify(obj, null, 2); el.style.display='block';
+}
+
+function resetMatrix() {
+  for (let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) matrix[r][c]=original[r][c];
+  buildTable();
+  document.getElementById('export-out').style.display='none';
+}
+
+buildTable();
+</script>
