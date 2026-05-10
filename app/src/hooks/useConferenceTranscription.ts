@@ -1,4 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  hasGeminiApiKey,
+  summarizeMeetingWithGemini,
+  type GeminiSummary,
+} from '../services/gemini'
 
 export type ConferenceTranscriptLine = {
   id: string
@@ -324,6 +329,7 @@ export function useConferenceTranscription({
   const lastAcceptedTextRef = useRef('')
   const lastTextAtRef = useRef(0)
   const seenIdsRef = useRef<Set<string>>(new Set())
+  const [geminiSummary, setGeminiSummary] = useState<GeminiSummary | null>(null)
 
   const audioContextCtor = getAudioContextConstructor()
   const isSupported =
@@ -653,9 +659,49 @@ export function useConferenceTranscription({
   const clearTranscript = useCallback(() => {
     seenIdsRef.current.clear()
     setTranscripts([])
+    setGeminiSummary(null)
   }, [])
 
-  const summary = useMemo(() => summarizeTranscript(transcripts), [transcripts])
+  const fallbackSummary = useMemo(() => summarizeTranscript(transcripts), [transcripts])
+
+  useEffect(() => {
+    if (transcripts.length === 0) {
+      setGeminiSummary(null)
+      return
+    }
+
+    const transcriptText = transcripts
+      .slice(-80)
+      .map((line) => `${line.speaker}: ${line.text}`)
+      .join('\n')
+
+    if (!hasGeminiApiKey() || transcriptText.trim().length < 120) {
+      setGeminiSummary(null)
+      return
+    }
+
+    let cancelled = false
+    const timeout = window.setTimeout(() => {
+      summarizeMeetingWithGemini(transcriptText)
+        .then((nextSummary) => {
+          if (!cancelled) {
+            setGeminiSummary(nextSummary)
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setGeminiSummary(null)
+          }
+        })
+    }, 1200)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timeout)
+    }
+  }, [transcripts])
+
+  const summary = geminiSummary ?? fallbackSummary
 
   return {
     transcripts,

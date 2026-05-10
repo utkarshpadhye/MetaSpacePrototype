@@ -21,6 +21,7 @@ export function InteractionModal({
   }
 
   const isLibrary = interaction.type === 'library'
+  const isPixelThemed = isLibrary || interaction.type === 'reception'
 
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center">
@@ -32,7 +33,7 @@ export function InteractionModal({
       />
       <div
         className={`relative h-[85vh] w-[90vw] max-w-[900px] rounded-xl p-6 shadow-[0_25px_80px_rgba(0,0,0,0.35)] transition-all ${
-          isLibrary
+          isPixelThemed
             ? 'pixel-panel pixel-ui border-[var(--pixel-border)] bg-[var(--pixel-panel)] text-[var(--pixel-ink)]'
             : 'border border-white/10 bg-[rgba(15,15,25,0.98)] text-slate-100 shadow-[0_25px_80px_rgba(0,0,0,0.7)]'
         } ${
@@ -44,7 +45,7 @@ export function InteractionModal({
         <button
           type="button"
           className={`modal-close absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-lg transition-transform duration-200 hover:rotate-90 ${
-            isLibrary ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' : 'bg-white/10 text-white'
+            isPixelThemed ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' : 'bg-white/10 text-white'
           }`}
           aria-label="Close"
           onClick={onClose}
@@ -52,13 +53,13 @@ export function InteractionModal({
           ×
         </button>
         <div className="flex h-full min-h-0 flex-col gap-3">
-          <p className={`text-sm uppercase tracking-[0.25em] ${isLibrary ? 'text-slate-500' : 'text-slate-400'}`}>
+          <p className={`text-sm uppercase tracking-[0.25em] ${isPixelThemed ? 'text-slate-500' : 'text-slate-400'}`}>
             Interaction
           </p>
           <h2 className="text-2xl font-semibold">{getInteractionTitle(interaction.type)}</h2>
           <div
             className={`flex min-h-0 flex-1 rounded-lg p-4 ${
-              isLibrary
+              isPixelThemed
                 ? 'pixel-panel border-[var(--pixel-border)] bg-white/80'
                 : 'border border-white/10 bg-black/30'
             } overflow-hidden`}
@@ -93,6 +94,12 @@ function getInteractionTitle(type: InteractionType) {
       return 'Mini Game'
     case 'library':
       return 'Library'
+    case 'reception':
+      return 'Reception'
+    case 'pm':
+      return 'Projects'
+    case 'crm':
+      return 'CRM'
     default:
       return 'Interaction'
   }
@@ -147,6 +154,50 @@ function renderInteractionBody(type: InteractionType) {
       )
     case 'library':
       return <LibraryPortal />
+    case 'reception':
+      return (
+        <div className="grid h-full w-full grid-cols-1 gap-3 text-[10px] text-slate-700 md:grid-cols-3">
+          <div className="pixel-panel flex flex-col justify-between p-4">
+            <div>
+              <div className="text-[9px] uppercase tracking-[0.2em] text-slate-500">Welcome</div>
+              <div className="mt-2 text-sm text-slate-900">MetaSpace Front Desk</div>
+              <p className="mt-3 leading-relaxed">Check visitors in, route teammates to rooms, and surface workspace notices from one place.</p>
+            </div>
+            <button type="button" className="pixel-button mt-4 px-3 py-2 text-[9px]">Guest Check-In</button>
+          </div>
+          <div className="pixel-panel p-4">
+            <div className="text-[9px] uppercase tracking-[0.2em] text-slate-500">Directory</div>
+            <div className="mt-3 grid gap-2">
+              <div className="flex justify-between border-b border-[var(--pixel-border)] pb-2"><span>Conference</span><span>North</span></div>
+              <div className="flex justify-between border-b border-[var(--pixel-border)] pb-2"><span>Library</span><span>East</span></div>
+              <div className="flex justify-between border-b border-[var(--pixel-border)] pb-2"><span>Cafeteria</span><span>North-East</span></div>
+              <div className="flex justify-between"><span>Projects</span><span>Desk Area</span></div>
+            </div>
+          </div>
+          <div className="pixel-panel p-4">
+            <div className="text-[9px] uppercase tracking-[0.2em] text-slate-500">Notices</div>
+            <div className="mt-3 grid gap-2">
+              <div className="bg-[#e9edf6] p-2">Daily standup at 10:00.</div>
+              <div className="bg-[#e9edf6] p-2">Client demos use Conference Room.</div>
+              <div className="bg-[#e9edf6] p-2">Docs and files live in Library.</div>
+            </div>
+          </div>
+        </div>
+      )
+    case 'pm':
+      return (
+        <div className="flex h-full flex-col items-center justify-center gap-3 text-slate-300">
+          <div className="text-sm">Use the top bar Projects button for the full Projects Room.</div>
+          <div className="h-32 w-64 rounded-lg border border-white/10 bg-violet-500/10" />
+        </div>
+      )
+    case 'crm':
+      return (
+        <div className="flex h-full flex-col items-center justify-center gap-3 text-slate-300">
+          <div className="text-sm">Use the top bar CRM button for the CRM Suite.</div>
+          <div className="h-32 w-64 rounded-lg border border-white/10 bg-emerald-500/10" />
+        </div>
+      )
     case 'plant':
       return (
         <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-300">

@@ -16,8 +16,8 @@ import {
 } from '../canvas/world'
 import { useGameLoop } from '../hooks/useGameLoop'
 
-const DEFAULT_ZOOM = 2
-const ZOOM_LEVELS = [1, 1.5, 2, 2.5, 3]
+const DEFAULT_ZOOM = 0.85
+const ZOOM_LEVELS = [0.75, 0.85, 1, 1.25, 1.5, 2, 2.5]
 const ZOOM_ANIMATION_MS = 200
 const PLAYER_SPRITE_SIZE = 48
 const PLAYER_FRAME_COUNT = 3
@@ -27,6 +27,11 @@ const WALK_FRAME_INTERVAL_MS = 150
 const WALK_FRAMES = [0, 1, 2, 1]
 const CAMERA_TELEPORT_THRESHOLD = TILE_SIZE * 2
 const DECOR_MANIFEST_SRC = '/assets/sprites/props/manifest.json'
+const MAP_BACKGROUND_SRC = '/assets/maps/cozy-startup-office-poc.png'
+const USE_BAKED_MAP = true
+const VIEWPORT_SAFE_TOP = 72
+const VIEWPORT_SAFE_BOTTOM = 104
+const VIEWPORT_SAFE_X = 12
 
 type Direction = (typeof PLAYER_DIRECTIONS)[number]
 
@@ -134,6 +139,7 @@ type GameCanvasProps = {
   syncedPeers: SyncedPeer[]
   localName: string
   localMuted: boolean
+  avatarSrc: string
   roomPermissions: Set<string>
   onLocalPresence: (state: {
     x: number
@@ -218,12 +224,15 @@ export function GameCanvas({
   syncedPeers,
   localName,
   localMuted,
+  avatarSrc,
   roomPermissions,
   onLocalPresence,
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const tilesetRef = useRef<HTMLImageElement | null>(null)
   const tilesetReadyRef = useRef(false)
+  const mapBackgroundRef = useRef<HTMLImageElement | null>(null)
+  const mapBackgroundReadyRef = useRef(false)
   const playerSheetRef = useRef<HTMLImageElement | null>(null)
   const playerSheetReadyRef = useRef(false)
   const playerSheetMetaRef = useRef<PlayerSheetMeta>({
@@ -242,6 +251,7 @@ export function GameCanvas({
   const decorImagesRef = useRef<Map<DecorPropKind, HTMLImageElement>>(new Map())
   const decorAtlasRef = useRef<HTMLImageElement | null>(null)
   const frameRef = useRef({ width: 0, height: 0, dpr: 1 })
+  const zoomInitializedRef = useRef(false)
   const cameraRef = useRef({ x: 0, y: 0 })
   const zoomRef = useRef({
     current: DEFAULT_ZOOM,
@@ -279,7 +289,8 @@ export function GameCanvas({
   })
   const tilesetSrc = useMemo(() => '/assets/tilesets/city.png', [])
   const tilesetFallbackSrc = useMemo(() => createPlaceholderTileset(), [])
-  const playerSheetSrc = useMemo(() => '/assets/avatars/player.png', [])
+  const mapBackgroundSrc = useMemo(() => MAP_BACKGROUND_SRC, [])
+  const playerSheetSrc = useMemo(() => avatarSrc, [avatarSrc])
   const playerFallbackSrc = useMemo(() => createPlaceholderPlayerSheet(), [])
 
   useEffect(() => {
@@ -404,6 +415,15 @@ export function GameCanvas({
     zoomState.elapsedMs = 0
   }, [])
 
+  const getFitZoom = (viewportWidth: number, viewportHeight: number) => {
+    const mapWidth = collisionMap[0].length * TILE_SIZE
+    const mapHeight = collisionMap.length * TILE_SIZE
+    const safeWidth = Math.max(320, viewportWidth - VIEWPORT_SAFE_X * 2)
+    const safeHeight = Math.max(240, viewportHeight - VIEWPORT_SAFE_TOP - VIEWPORT_SAFE_BOTTOM)
+    const fit = Math.min(safeWidth / mapWidth, safeHeight / mapHeight, 1)
+    return Math.max(ZOOM_LEVELS[0], Math.min(1, fit))
+  }
+
   const buildTileLayer = (layer: number[][]) => {
     if (!tilesetReadyRef.current || !tilesetRef.current) {
       return null
@@ -448,6 +468,26 @@ export function GameCanvas({
   }
 
   useEffect(() => {
+    const maybeMarkAssetsReady = () => {
+      const mapReady = !USE_BAKED_MAP || mapBackgroundReadyRef.current
+      if (playerSheetReadyRef.current && mapReady && !assetsReadyRef.current) {
+        assetsReadyRef.current = true
+        onAssetsReady()
+      }
+    }
+
+    const mapImage = new Image()
+    mapImage.onload = () => {
+      mapBackgroundReadyRef.current = true
+      maybeMarkAssetsReady()
+    }
+    mapImage.onerror = () => {
+      mapBackgroundReadyRef.current = false
+      maybeMarkAssetsReady()
+    }
+    mapImage.src = mapBackgroundSrc
+    mapBackgroundRef.current = mapImage
+
     const image = new Image()
     image.onload = () => {
       tilesetReadyRef.current = true
@@ -457,10 +497,7 @@ export function GameCanvas({
         roof: buildTileLayer(tileLayers.roof),
       }
       tileLayersReadyRef.current = true
-      if (playerSheetReadyRef.current && !assetsReadyRef.current) {
-        assetsReadyRef.current = true
-        onAssetsReady()
-      }
+      maybeMarkAssetsReady()
     }
     image.onerror = () => {
       if (image.src !== tilesetFallbackSrc) {
@@ -504,10 +541,7 @@ export function GameCanvas({
 
       playerSheetMetaRef.current = { frameSize, columns, rows, directionRows }
       playerSheetReadyRef.current = true
-      if (tilesetReadyRef.current && !assetsReadyRef.current) {
-        assetsReadyRef.current = true
-        onAssetsReady()
-      }
+      maybeMarkAssetsReady()
     }
     playerImage.onerror = () => {
       if (playerImage.src !== playerFallbackSrc) {
@@ -520,12 +554,14 @@ export function GameCanvas({
     return () => {
       tilesetRef.current = null
       tilesetReadyRef.current = false
+      mapBackgroundRef.current = null
+      mapBackgroundReadyRef.current = false
       playerSheetRef.current = null
       playerSheetReadyRef.current = false
       tileLayersRef.current = { floor: null, detail: null, roof: null }
       tileLayersReadyRef.current = false
     }
-  }, [onAssetsReady, playerFallbackSrc, playerSheetSrc, tilesetFallbackSrc, tilesetSrc])
+  }, [mapBackgroundSrc, onAssetsReady, playerFallbackSrc, playerSheetSrc, tilesetFallbackSrc, tilesetSrc])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -641,6 +677,17 @@ export function GameCanvas({
       const height = window.innerHeight
 
       frameRef.current = { width, height, dpr }
+
+      if (!zoomInitializedRef.current) {
+        const fitZoom = getFitZoom(width, height)
+        zoomRef.current = {
+          current: fitZoom,
+          target: fitZoom,
+          start: fitZoom,
+          elapsedMs: 0,
+        }
+        zoomInitializedRef.current = true
+      }
 
       canvas.width = Math.floor(width * dpr)
       canvas.height = Math.floor(height * dpr)
@@ -963,6 +1010,37 @@ export function GameCanvas({
           ctx.textAlign = 'center'
           ctx.textBaseline = 'middle'
           ctx.fillText('LB', drawX + drawW / 2, drawY + drawH / 2)
+          ctx.restore()
+          return
+        }
+        if (
+          object.type === 'tv' ||
+          object.type === 'game' ||
+          object.type === 'reception' ||
+          object.type === 'pm' ||
+          object.type === 'crm'
+        ) {
+          const drawW = object.width * TILE_SIZE
+          const drawH = object.height * TILE_SIZE
+          const markerText: Partial<Record<WorldObject['type'], string>> = {
+            tv: 'AV',
+            game: 'GM',
+            reception: 'RX',
+            pm: 'PM',
+            crm: 'CRM',
+          }
+          ctx.save()
+          ctx.fillStyle = `${getObjectColor(object.type)}22`
+          ctx.strokeStyle = getObjectColor(object.type)
+          ctx.lineWidth = 2
+          roundRect(ctx, drawX + 4, drawY + 4, drawW - 8, drawH - 8, 4)
+          ctx.fill()
+          ctx.stroke()
+          ctx.fillStyle = '#1f2937'
+          ctx.font = '8px "Press Start 2P", sans-serif'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.fillText(markerText[object.type] ?? '', drawX + drawW / 2, drawY + drawH / 2)
           ctx.restore()
           return
         }
@@ -1355,6 +1433,12 @@ export function GameCanvas({
         return '#975a16'
       case 'library':
         return '#0ea5e9'
+      case 'reception':
+        return '#cbd5f5'
+      case 'pm':
+        return '#8b5cf6'
+      case 'crm':
+        return '#22c55e'
       default:
         return '#718096'
     }
@@ -1382,6 +1466,12 @@ export function GameCanvas({
         return 'Mini Game'
       case 'library':
         return 'Library Kiosk'
+      case 'reception':
+        return 'Reception Desk'
+      case 'pm':
+        return 'Projects Board'
+      case 'crm':
+        return 'CRM Workspace'
       default:
         return 'Object'
     }
@@ -1604,8 +1694,16 @@ export function GameCanvas({
     const zoom = zoomRef.current.current
     const mapWidth = TILE_SIZE * collisionMap[0].length
     const mapHeight = TILE_SIZE * collisionMap.length
-    const targetX = width / 2 - (playerX * TILE_SIZE + TILE_SIZE / 2) * zoom
-    const targetY = height / 2 - (playerY * TILE_SIZE + TILE_SIZE / 2) * zoom
+    const safeWidth = width - VIEWPORT_SAFE_X * 2
+    const safeHeight = height - VIEWPORT_SAFE_TOP - VIEWPORT_SAFE_BOTTOM
+    const targetX =
+      VIEWPORT_SAFE_X +
+      safeWidth / 2 -
+      (playerX * TILE_SIZE + TILE_SIZE / 2) * zoom
+    const targetY =
+      VIEWPORT_SAFE_TOP +
+      safeHeight / 2 -
+      (playerY * TILE_SIZE + TILE_SIZE / 2) * zoom
 
     const clamped = clampCamera(
       targetX,
@@ -1642,21 +1740,27 @@ export function GameCanvas({
     mapWidth: number,
     mapHeight: number,
   ) => {
-    const maxX = 0
-    const maxY = 0
-    const minX = -(mapWidth * zoom - viewportWidth)
-    const minY = -(mapHeight * zoom - viewportHeight)
+    const safeLeft = VIEWPORT_SAFE_X
+    const safeRight = viewportWidth - VIEWPORT_SAFE_X
+    const safeTop = VIEWPORT_SAFE_TOP
+    const safeBottom = viewportHeight - VIEWPORT_SAFE_BOTTOM
+    const safeWidth = safeRight - safeLeft
+    const safeHeight = safeBottom - safeTop
+    const maxX = safeLeft
+    const maxY = safeTop
+    const minX = safeRight - mapWidth * zoom
+    const minY = safeBottom - mapHeight * zoom
 
     const clampedX = Math.min(maxX, Math.max(minX, x))
     const clampedY = Math.min(maxY, Math.max(minY, y))
 
     const finalX =
-      mapWidth * zoom <= viewportWidth
-        ? (viewportWidth - mapWidth * zoom) / 2
+      mapWidth * zoom <= safeWidth
+        ? safeLeft + (safeWidth - mapWidth * zoom) / 2
         : clampedX
     const finalY =
-      mapHeight * zoom <= viewportHeight
-        ? (viewportHeight - mapHeight * zoom) / 2
+      mapHeight * zoom <= safeHeight
+        ? safeTop + (safeHeight - mapHeight * zoom) / 2
         : clampedY
 
     return { x: finalX, y: finalY }
@@ -1851,32 +1955,36 @@ export function GameCanvas({
 
     const mapWidth = collisionMap[0].length * TILE_SIZE
     const mapHeight = collisionMap.length * TILE_SIZE
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, mapWidth, mapHeight)
-    ctx.strokeStyle = '#e2e8f0'
-    ctx.lineWidth = 1
-    for (let x = 0; x <= mapWidth; x += TILE_SIZE) {
-      ctx.beginPath()
-      ctx.moveTo(x, 0)
-      ctx.lineTo(x, mapHeight)
-      ctx.stroke()
-    }
-    for (let y = 0; y <= mapHeight; y += TILE_SIZE) {
-      ctx.beginPath()
-      ctx.moveTo(0, y)
-      ctx.lineTo(mapWidth, y)
-      ctx.stroke()
-    }
+    if (USE_BAKED_MAP && mapBackgroundReadyRef.current && mapBackgroundRef.current) {
+      ctx.drawImage(mapBackgroundRef.current, 0, 0, mapWidth, mapHeight)
+    } else {
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, mapWidth, mapHeight)
+      ctx.strokeStyle = '#e2e8f0'
+      ctx.lineWidth = 1
+      for (let x = 0; x <= mapWidth; x += TILE_SIZE) {
+        ctx.beginPath()
+        ctx.moveTo(x, 0)
+        ctx.lineTo(x, mapHeight)
+        ctx.stroke()
+      }
+      for (let y = 0; y <= mapHeight; y += TILE_SIZE) {
+        ctx.beginPath()
+        ctx.moveTo(0, y)
+        ctx.lineTo(mapWidth, y)
+        ctx.stroke()
+      }
 
-    drawFocusRooms(ctx)
-    drawWalls(ctx)
-    drawSectionAmbience(ctx)
-    drawSectionLabels(ctx)
-    drawDecor(ctx, 'below')
-    drawFurniture(ctx)
-    drawSeats(ctx)
+      drawFocusRooms(ctx)
+      drawWalls(ctx)
+      drawSectionAmbience(ctx)
+      drawSectionLabels(ctx)
+      drawDecor(ctx, 'below')
+      drawFurniture(ctx)
+      drawSeats(ctx)
 
-    drawObjects(ctx, 'below')
+      drawObjects(ctx, 'below')
+    }
 
     peers
       .filter((peer) => peer.roomId === player.roomId)
@@ -1886,11 +1994,12 @@ export function GameCanvas({
 
     drawPlayer(ctx, labelOffsets.get('you') ?? 0)
 
-    drawDecor(ctx, 'above')
+    if (!USE_BAKED_MAP) {
+      drawDecor(ctx, 'above')
+      drawObjects(ctx, 'above')
+    }
 
-    drawObjects(ctx, 'above')
-
-    if (tileLayersReadyRef.current && tileLayersRef.current.roof) {
+    if (!USE_BAKED_MAP && tileLayersReadyRef.current && tileLayersRef.current.roof) {
       ctx.drawImage(tileLayersRef.current.roof, 0, 0)
     }
 

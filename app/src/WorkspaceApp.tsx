@@ -11,6 +11,7 @@ import { NotificationToast } from './components/NotificationToast'
 import { ProximityVoiceOverlay } from './components/ProximityVoiceOverlay'
 import { ProjectManagementOverlay } from './components/ProjectManagementOverlay'
 import { RightSidebar } from './components/RightSidebar'
+import { SettingsModal } from './components/SettingsModal'
 import { TopBar } from './components/TopBar'
 import { VideoOverlay } from './components/VideoOverlay'
 import { DocsWorkspaceOverlay } from './components/DocsWorkspaceOverlay'
@@ -53,6 +54,8 @@ type Toast = {
   status: 'entering' | 'leaving'
 }
 
+type AvatarChoice = 'male' | 'female'
+
 type SharedChatMessagePayload = {
   type: 'chat-message'
   sessionId: string
@@ -66,6 +69,12 @@ type Props = {
   userName: string
   permissions: Set<string>
   bannerMessage?: string
+}
+
+const AVATAR_STORAGE_KEY = 'metaspace-avatar-choice'
+const AVATAR_SOURCES: Record<AvatarChoice, string> = {
+  male: '/assets/avatars/player-male.png',
+  female: '/assets/avatars/player-female.png',
 }
 
 function WorkspaceApp({ workspaceId, userId, userName, permissions, bannerMessage }: Props) {
@@ -82,6 +91,11 @@ function WorkspaceApp({ workspaceId, userId, userName, permissions, bannerMessag
   const [isProjectsOpen, setIsProjectsOpen] = useState(false)
   const [isDocsOpen, setIsDocsOpen] = useState(false)
   const [isCrmOpen, setIsCrmOpen] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [avatar, setAvatar] = useState<AvatarChoice>(() => {
+    const stored = window.localStorage.getItem(AVATAR_STORAGE_KEY)
+    return stored === 'female' ? 'female' : 'male'
+  })
   const [activePanel, setActivePanel] = useState<'participants' | 'chat' | null>(null)
   const [participants, setParticipants] = useState<
     Array<{
@@ -350,6 +364,21 @@ function WorkspaceApp({ workspaceId, userId, userName, permissions, bannerMessag
     setIsCalendarOpen(false)
   }, [])
 
+  const handleToggleSettings = useCallback(() => {
+    setIsSettingsOpen((prev) => !prev)
+    setIsProjectsOpen(false)
+    setIsDocsOpen(false)
+    setIsCrmOpen(false)
+    setActivePanel(null)
+    setIsAnaOpen(false)
+    setIsCalendarOpen(false)
+  }, [])
+
+  const handleAvatarChange = useCallback((nextAvatar: AvatarChoice) => {
+    setAvatar(nextAvatar)
+    window.localStorage.setItem(AVATAR_STORAGE_KEY, nextAvatar)
+  }, [])
+
   const pushToast = useCallback((message: string) => {
     const id = `t-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
     setToasts((prev) => [...prev, { id, message, status: 'entering' }])
@@ -456,6 +485,7 @@ function WorkspaceApp({ workspaceId, userId, userName, permissions, bannerMessag
         onToggleProjects={handleToggleProjects}
         onToggleDocs={handleToggleDocs}
         onToggleCrm={handleToggleCrm}
+        onToggleSettings={handleToggleSettings}
         onEmojiSelect={handleEmojiReaction}
         onToggleMute={() => setIsMuted((prev) => !prev)}
         isAnaThinking={ana.isThinking}
@@ -465,6 +495,7 @@ function WorkspaceApp({ workspaceId, userId, userName, permissions, bannerMessag
         isProjectsOpen={isProjectsOpen}
         isDocsOpen={isDocsOpen}
         isCrmOpen={isCrmOpen}
+        isSettingsOpen={isSettingsOpen}
       />
       <NotificationToast toasts={toasts} />
       <ProximityVoiceOverlay active={!isConferenceRoom} connectedPeers={proximityVoice.connectedPeers} error={proximityVoice.error} />
@@ -513,12 +544,19 @@ function WorkspaceApp({ workspaceId, userId, userName, permissions, bannerMessag
         syncedPeers={session.remotePeers}
         localName={session.localName}
         localMuted={isMuted}
+        avatarSrc={AVATAR_SOURCES[avatar]}
         roomPermissions={currentUserRole.permissions}
         onLocalPresence={session.publishPresence}
       />
       <RightSidebar activePanel={activePanel} participants={peoplePanelParticipants} messages={messages} typingIndicator="" />
       <BottomBar hintText={hintText} voiceLabel={voiceLabel} onSendMessage={handleSendMessage} onTypingChange={setIsTyping} />
       <InteractionModal interaction={interaction} isClosing={isInteractionClosing} onClose={handleInteractionClose} />
+      <SettingsModal
+        open={isSettingsOpen}
+        avatar={avatar}
+        onAvatarChange={handleAvatarChange}
+        onClose={() => setIsSettingsOpen(false)}
+      />
       <CalendarOverlay
         open={isCalendarOpen}
         onClose={() => setIsCalendarOpen(false)}

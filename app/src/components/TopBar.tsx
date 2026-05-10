@@ -15,6 +15,7 @@ type TopBarProps = {
   onToggleProjects: () => void
   onToggleDocs: () => void
   onToggleCrm: () => void
+  onToggleSettings: () => void
   onEmojiSelect: (emoji: string) => void
   onToggleMute: () => void
   isAnaThinking: boolean
@@ -24,6 +25,7 @@ type TopBarProps = {
   isProjectsOpen: boolean
   isDocsOpen: boolean
   isCrmOpen: boolean
+  isSettingsOpen: boolean
 }
 
 export function TopBar({
@@ -41,6 +43,7 @@ export function TopBar({
   onToggleProjects,
   onToggleDocs,
   onToggleCrm,
+  onToggleSettings,
   onEmojiSelect,
   onToggleMute,
   isAnaThinking,
@@ -50,6 +53,7 @@ export function TopBar({
   isProjectsOpen,
   isDocsOpen,
   isCrmOpen,
+  isSettingsOpen,
 }: TopBarProps) {
   const [isEmojiOpen, setIsEmojiOpen] = useState(false)
   const emojiRef = useRef<HTMLDivElement | null>(null)
@@ -161,6 +165,11 @@ export function TopBar({
           badgeCount={unreadCount}
           badgePulseKey={chatBadgePulse}
           onClick={onToggleChat}
+        />
+        <TopBarButton
+          label="Settings"
+          active={isSettingsOpen}
+          onClick={onToggleSettings}
         />
       </div>
     </div>

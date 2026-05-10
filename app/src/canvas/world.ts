@@ -1,6 +1,6 @@
 export const TILE_SIZE = 32
-export const MAP_ROWS = 22
-export const MAP_COLS = 30
+export const MAP_ROWS = 30
+export const MAP_COLS = 53
 export const TILESET_COLUMNS = 32
 export const TILESET_ROWS = 48
 
@@ -17,6 +17,9 @@ export type WorldObject = {
     | 'note'
     | 'game'
     | 'library'
+    | 'reception'
+    | 'pm'
+    | 'crm'
   x: number
   y: number
   width: number
@@ -105,8 +108,8 @@ export const rooms: Room[] = [
 ]
 
 const EMPTY_TILE = -1
-
 const FLOOR_TILE = 0
+
 export const floorLayer: number[][] = Array.from({ length: MAP_ROWS }, () =>
   Array.from({ length: MAP_COLS }, () => FLOOR_TILE),
 )
@@ -121,11 +124,35 @@ export const roofLayer: number[][] = Array.from({ length: MAP_ROWS }, () =>
 
 export const objects: WorldObject[] = [
   {
+    id: 'conference-screen',
+    type: 'tv',
+    x: 15,
+    y: 1,
+    width: 4,
+    height: 1,
+    tileId: 0,
+    interactive: true,
+    interactRadius: 3,
+    zLayer: 'above',
+  },
+  {
     id: 'lounge-whiteboard',
     type: 'whiteboard',
-    x: 5,
-    y: 11,
-    width: 1,
+    x: 25,
+    y: 1,
+    width: 3,
+    height: 1,
+    tileId: 0,
+    interactive: true,
+    interactRadius: 3,
+    zLayer: 'above',
+  },
+  {
+    id: 'lounge-game-table',
+    type: 'game',
+    x: 26,
+    y: 4,
+    width: 2,
     height: 1,
     tileId: 0,
     interactive: true,
@@ -135,60 +162,66 @@ export const objects: WorldObject[] = [
   {
     id: 'cafeteria-converter',
     type: 'converter',
-    x: 17,
-    y: 10,
-    width: 1,
+    x: 35,
+    y: 3,
+    width: 4,
     height: 1,
     tileId: 0,
     interactive: true,
-    interactRadius: 2,
+    interactRadius: 3,
     zLayer: 'above',
   },
   {
     id: 'library-kiosk',
     type: 'library',
-    x: 24,
-    y: 10,
-    width: 1,
+    x: 47,
+    y: 1,
+    width: 4,
     height: 1,
     tileId: 0,
     interactive: true,
-    interactRadius: 2,
+    interactRadius: 3,
     zLayer: 'above',
   },
   {
-    id: 'pm-room-door',
-    type: 'door',
-    x: 14,
-    y: 14,
-    width: 1,
+    id: 'reception-desk',
+    type: 'reception',
+    x: 22,
+    y: 23,
+    width: 9,
+    height: 2,
+    tileId: 0,
+    interactive: true,
+    interactRadius: 3,
+    zLayer: 'above',
+  },
+  {
+    id: 'pm-room-hotspot',
+    type: 'pm',
+    x: 23,
+    y: 11,
+    width: 5,
     height: 1,
     tileId: 0,
     interactive: true,
-    interactRadius: 1,
+    interactRadius: 3,
     zLayer: 'above',
-    targetX: 4,
-    targetY: 4,
-    targetRoom: 'PM Room',
     requiredPermission: 'room.pm_access',
-    lockedHint: 'PM door is locked. Requires room.pm_access.',
+    lockedHint: 'PM workspace is locked. Requires room.pm_access.',
   },
   {
-    id: 'crm-room-door',
-    type: 'door',
-    x: 15,
-    y: 14,
-    width: 1,
+    id: 'crm-room-hotspot',
+    type: 'crm',
+    x: 34,
+    y: 22,
+    width: 8,
     height: 1,
     tileId: 0,
     interactive: true,
-    interactRadius: 1,
+    interactRadius: 3,
     zLayer: 'above',
-    targetX: 24,
-    targetY: 4,
-    targetRoom: 'CRM Room',
     requiredPermission: 'room.crm_access',
-    lockedHint: 'CRM door is locked. Requires room.crm_access.',
+    lockedHint: 'CRM workspace is locked. Requires room.crm_access.',
   },
 ]
 
@@ -196,212 +229,103 @@ export const sections: Section[] = [
   {
     id: 'conference',
     name: 'Conference Room',
-    x: 1,
-    y: 1,
-    width: 10,
-    height: 6,
+    x: 10,
+    y: 0,
+    width: 11,
+    height: 8,
+    voiceMode: 'common',
+  },
+  {
+    id: 'lounge',
+    name: 'Lounge',
+    x: 22,
+    y: 0,
+    width: 9,
+    height: 8,
+    voiceMode: 'common',
+  },
+  {
+    id: 'cafeteria',
+    name: 'Cafeteria',
+    x: 32,
+    y: 0,
+    width: 12,
+    height: 10,
+    voiceMode: 'common',
+  },
+  {
+    id: 'library',
+    name: 'Library',
+    x: 45,
+    y: 0,
+    width: 7,
+    height: 9,
     voiceMode: 'common',
   },
   {
     id: 'desks',
     name: 'Desk Area',
     x: 12,
-    y: 1,
-    width: 17,
-    height: 6,
+    y: 10,
+    width: 27,
+    height: 10,
     voiceMode: 'private',
   },
   {
-    id: 'lounge',
-    name: 'Lounge',
-    x: 1,
-    y: 8,
-    width: 9,
-    height: 6,
+    id: 'reception',
+    name: 'Reception',
+    x: 20,
+    y: 21,
+    width: 13,
+    height: 8,
     voiceMode: 'common',
   },
   {
-    id: 'cafeteria',
-    name: 'Cafeteria',
-    x: 12,
-    y: 8,
+    id: 'side-desks',
+    name: 'Desk Rooms',
+    x: 0,
+    y: 0,
     width: 9,
-    height: 6,
-    voiceMode: 'common',
+    height: 29,
+    voiceMode: 'private',
   },
   {
-    id: 'library',
-    name: 'Library',
-    x: 21,
-    y: 8,
+    id: 'right-desks',
+    name: 'Desk Rooms',
+    x: 44,
+    y: 9,
     width: 8,
-    height: 6,
-    voiceMode: 'common',
-  },
-  {
-    id: 'focus-a',
-    name: 'Focus Room A',
-    x: 1,
-    y: 15,
-    width: 6,
-    height: 6,
+    height: 20,
     voiceMode: 'private',
-    focus: true,
-  },
-  {
-    id: 'focus-b',
-    name: 'Focus Room B',
-    x: 8,
-    y: 15,
-    width: 6,
-    height: 6,
-    voiceMode: 'private',
-    focus: true,
-  },
-  {
-    id: 'focus-c',
-    name: 'Focus Room C',
-    x: 15,
-    y: 15,
-    width: 6,
-    height: 6,
-    voiceMode: 'private',
-    focus: true,
-  },
-  {
-    id: 'focus-d',
-    name: 'Focus Room D',
-    x: 22,
-    y: 15,
-    width: 6,
-    height: 6,
-    voiceMode: 'private',
-    focus: true,
   },
 ]
 
-export const furniture: Furniture[] = [
-  { id: 'conf-table', kind: 'table', x: 3, y: 3, width: 6, height: 2, sectionId: 'conference' },
-  { id: 'desk-1', kind: 'table', x: 13, y: 2, width: 2, height: 1, sectionId: 'desks' },
-  { id: 'desk-2', kind: 'table', x: 17, y: 2, width: 2, height: 1, sectionId: 'desks' },
-  { id: 'desk-3', kind: 'table', x: 21, y: 2, width: 2, height: 1, sectionId: 'desks' },
-  { id: 'desk-4', kind: 'table', x: 13, y: 4, width: 2, height: 1, sectionId: 'desks' },
-  { id: 'desk-5', kind: 'table', x: 17, y: 4, width: 2, height: 1, sectionId: 'desks' },
-  { id: 'desk-6', kind: 'table', x: 21, y: 4, width: 2, height: 1, sectionId: 'desks' },
-  { id: 'sofa-1', kind: 'sofa', x: 2, y: 9, width: 3, height: 1, sectionId: 'lounge' },
-  { id: 'sofa-2', kind: 'sofa', x: 6, y: 9, width: 3, height: 1, sectionId: 'lounge' },
-  { id: 'sofa-3', kind: 'sofa', x: 4, y: 11, width: 3, height: 1, sectionId: 'lounge' },
-  { id: 'caf-converter-table', kind: 'table', x: 19, y: 10, width: 3, height: 1, sectionId: 'cafeteria' },
-  { id: 'focus-a-desk', kind: 'desk', x: 2, y: 17, width: 2, height: 1, sectionId: 'focus-a' },
-  { id: 'focus-b-desk', kind: 'desk', x: 9, y: 17, width: 2, height: 1, sectionId: 'focus-b' },
-  { id: 'focus-c-desk', kind: 'desk', x: 16, y: 17, width: 2, height: 1, sectionId: 'focus-c' },
-  { id: 'focus-d-desk', kind: 'desk', x: 23, y: 17, width: 2, height: 1, sectionId: 'focus-d' },
-]
+export const furniture: Furniture[] = []
 
-export const decorProps: DecorProp[] = [
-  // Lounge
-  { id: 'lounge-rug-main', kind: 'rug-square', x: 4, y: 9, width: 3, height: 3, sectionId: 'lounge', zLayer: 'below' },
-  { id: 'lounge-sofa-1', kind: 'lounge-sofa', x: 2, y: 9, width: 3, height: 1, sectionId: 'lounge', zLayer: 'above' },
-  { id: 'lounge-sofa-2', kind: 'lounge-sofa', x: 6, y: 9, width: 3, height: 1, sectionId: 'lounge', zLayer: 'above' },
-  { id: 'lounge-sofa-corner', kind: 'lounge-sofa-corner', x: 4, y: 11, width: 3, height: 1, sectionId: 'lounge', zLayer: 'above' },
-  { id: 'lounge-lamp-left', kind: 'lamp-round-floor', x: 2, y: 12, width: 1, height: 1, sectionId: 'lounge', zLayer: 'above' },
-  { id: 'lounge-lamp-right', kind: 'lamp-round-floor', x: 8, y: 12, width: 1, height: 1, sectionId: 'lounge', zLayer: 'above' },
-  { id: 'lounge-plant-top-left', kind: 'potted-plant', x: 1, y: 9, width: 1, height: 1, sectionId: 'lounge', zLayer: 'above' },
-  { id: 'lounge-plant-top-right', kind: 'potted-plant', x: 9, y: 9, width: 1, height: 1, sectionId: 'lounge', zLayer: 'above' },
-  { id: 'lounge-plant-bottom-left', kind: 'potted-plant', x: 1, y: 13, width: 1, height: 1, sectionId: 'lounge', zLayer: 'above' },
-  { id: 'lounge-plant-bottom-right', kind: 'potted-plant', x: 9, y: 13, width: 1, height: 1, sectionId: 'lounge', zLayer: 'above' },
-
-  // Desk area
-  { id: 'desk-main-1', kind: 'chair-desk', x: 13, y: 2, width: 2, height: 1, sectionId: 'desks', zLayer: 'above' },
-  { id: 'desk-main-2', kind: 'chair-desk', x: 17, y: 2, width: 2, height: 1, sectionId: 'desks', zLayer: 'above' },
-  { id: 'desk-main-3', kind: 'chair-desk', x: 21, y: 2, width: 2, height: 1, sectionId: 'desks', zLayer: 'above' },
-  { id: 'desk-main-4', kind: 'chair-desk', x: 13, y: 4, width: 2, height: 1, sectionId: 'desks', zLayer: 'above' },
-  { id: 'desk-main-5', kind: 'chair-desk', x: 17, y: 4, width: 2, height: 1, sectionId: 'desks', zLayer: 'above' },
-  { id: 'desk-main-6', kind: 'chair-desk', x: 21, y: 4, width: 2, height: 1, sectionId: 'desks', zLayer: 'above' },
-  { id: 'desk-plant-1', kind: 'potted-plant', x: 16, y: 2, width: 1, height: 1, sectionId: 'desks', zLayer: 'above' },
-  { id: 'desk-plant-2', kind: 'potted-plant', x: 20, y: 2, width: 1, height: 1, sectionId: 'desks', zLayer: 'above' },
-  { id: 'desk-plant-3', kind: 'potted-plant', x: 24, y: 2, width: 1, height: 1, sectionId: 'desks', zLayer: 'above' },
-  { id: 'desk-plant-4', kind: 'potted-plant', x: 16, y: 4, width: 1, height: 1, sectionId: 'desks', zLayer: 'above' },
-  { id: 'desk-plant-5', kind: 'potted-plant', x: 20, y: 4, width: 1, height: 1, sectionId: 'desks', zLayer: 'above' },
-  { id: 'desk-plant-6', kind: 'potted-plant', x: 24, y: 4, width: 1, height: 1, sectionId: 'desks', zLayer: 'above' },
-  { id: 'desk-lamp-1', kind: 'lamp-round-floor', x: 28, y: 2, width: 1, height: 1, sectionId: 'desks', zLayer: 'above' },
-  { id: 'desk-lamp-2', kind: 'lamp-round-floor', x: 28, y: 4, width: 1, height: 1, sectionId: 'desks', zLayer: 'above' },
-
-  // Cafeteria
-  { id: 'cafeteria-rug-main', kind: 'rug-square', x: 19, y: 9, width: 3, height: 3, sectionId: 'cafeteria', zLayer: 'below' },
-  { id: 'cafeteria-lamp-left', kind: 'lamp-round-floor', x: 13, y: 9, width: 1, height: 1, sectionId: 'cafeteria', zLayer: 'above' },
-  { id: 'cafeteria-lamp-right', kind: 'lamp-round-floor', x: 20, y: 9, width: 1, height: 1, sectionId: 'cafeteria', zLayer: 'above' },
-  { id: 'cafeteria-plant-left', kind: 'potted-plant', x: 13, y: 13, width: 1, height: 1, sectionId: 'cafeteria', zLayer: 'above' },
-  { id: 'cafeteria-plant-right', kind: 'potted-plant', x: 20, y: 13, width: 1, height: 1, sectionId: 'cafeteria', zLayer: 'above' },
-  { id: 'cafeteria-workstation', kind: 'chair-desk', x: 15, y: 10, width: 2, height: 1, sectionId: 'cafeteria', zLayer: 'above' },
-
-  // Library
-  { id: 'library-rug-main', kind: 'rug-square', x: 23, y: 9, width: 4, height: 3, sectionId: 'library', zLayer: 'below' },
-  { id: 'library-lamp-left', kind: 'lamp-round-floor', x: 22, y: 9, width: 1, height: 1, sectionId: 'library', zLayer: 'above' },
-  { id: 'library-lamp-right', kind: 'lamp-round-floor', x: 28, y: 9, width: 1, height: 1, sectionId: 'library', zLayer: 'above' },
-  { id: 'library-plant-left', kind: 'potted-plant', x: 22, y: 13, width: 1, height: 1, sectionId: 'library', zLayer: 'above' },
-  { id: 'library-plant-right', kind: 'potted-plant', x: 28, y: 13, width: 1, height: 1, sectionId: 'library', zLayer: 'above' },
-  { id: 'library-workstation', kind: 'chair-desk', x: 25, y: 10, width: 2, height: 1, sectionId: 'library', zLayer: 'above' },
-
-  // Conference
-  { id: 'conference-rug-main', kind: 'rug-square', x: 5, y: 2, width: 3, height: 3, sectionId: 'conference', zLayer: 'below' },
-  { id: 'conference-plant-1', kind: 'potted-plant', x: 2, y: 2, width: 1, height: 1, sectionId: 'conference', zLayer: 'above' },
-  { id: 'conference-plant-2', kind: 'potted-plant', x: 9, y: 2, width: 1, height: 1, sectionId: 'conference', zLayer: 'above' },
-  { id: 'conference-plant-3', kind: 'potted-plant', x: 2, y: 5, width: 1, height: 1, sectionId: 'conference', zLayer: 'above' },
-  { id: 'conference-plant-4', kind: 'potted-plant', x: 9, y: 5, width: 1, height: 1, sectionId: 'conference', zLayer: 'above' },
-  { id: 'conference-lamp-left', kind: 'lamp-round-floor', x: 1, y: 3, width: 1, height: 1, sectionId: 'conference', zLayer: 'above' },
-  { id: 'conference-lamp-right', kind: 'lamp-round-floor', x: 10, y: 3, width: 1, height: 1, sectionId: 'conference', zLayer: 'above' },
-
-  // Focus rooms
-  { id: 'focus-a-desk-decor', kind: 'chair-desk', x: 2, y: 17, width: 2, height: 1, sectionId: 'focus-a', zLayer: 'above' },
-  { id: 'focus-b-desk-decor', kind: 'chair-desk', x: 9, y: 17, width: 2, height: 1, sectionId: 'focus-b', zLayer: 'above' },
-  { id: 'focus-c-desk-decor', kind: 'chair-desk', x: 16, y: 17, width: 2, height: 1, sectionId: 'focus-c', zLayer: 'above' },
-  { id: 'focus-d-desk-decor', kind: 'chair-desk', x: 23, y: 17, width: 2, height: 1, sectionId: 'focus-d', zLayer: 'above' },
-  { id: 'focus-a-lamp', kind: 'lamp-round-floor', x: 5, y: 17, width: 1, height: 1, sectionId: 'focus-a', zLayer: 'above' },
-  { id: 'focus-b-lamp', kind: 'lamp-round-floor', x: 12, y: 17, width: 1, height: 1, sectionId: 'focus-b', zLayer: 'above' },
-  { id: 'focus-c-lamp', kind: 'lamp-round-floor', x: 19, y: 17, width: 1, height: 1, sectionId: 'focus-c', zLayer: 'above' },
-  { id: 'focus-d-lamp', kind: 'lamp-round-floor', x: 26, y: 17, width: 1, height: 1, sectionId: 'focus-d', zLayer: 'above' },
-  { id: 'focus-a-plant', kind: 'potted-plant', x: 3, y: 19, width: 1, height: 1, sectionId: 'focus-a', zLayer: 'above' },
-  { id: 'focus-b-plant', kind: 'potted-plant', x: 10, y: 19, width: 1, height: 1, sectionId: 'focus-b', zLayer: 'above' },
-  { id: 'focus-c-plant', kind: 'potted-plant', x: 17, y: 19, width: 1, height: 1, sectionId: 'focus-c', zLayer: 'above' },
-  { id: 'focus-d-plant', kind: 'potted-plant', x: 24, y: 19, width: 1, height: 1, sectionId: 'focus-d', zLayer: 'above' },
-]
+export const decorProps: DecorProp[] = []
 
 export const seats: Seat[] = [
-  { id: 'conf-seat-1', label: 'Conference Seat 1', x: 3, y: 2, sectionId: 'conference', channelMode: 'common', channelName: 'Conference Room' },
-  { id: 'conf-seat-2', label: 'Conference Seat 2', x: 4, y: 2, sectionId: 'conference', channelMode: 'common', channelName: 'Conference Room' },
-  { id: 'conf-seat-3', label: 'Conference Seat 3', x: 5, y: 2, sectionId: 'conference', channelMode: 'common', channelName: 'Conference Room' },
-  { id: 'conf-seat-4', label: 'Conference Seat 4', x: 6, y: 2, sectionId: 'conference', channelMode: 'common', channelName: 'Conference Room' },
-  { id: 'conf-seat-5', label: 'Conference Seat 5', x: 7, y: 2, sectionId: 'conference', channelMode: 'common', channelName: 'Conference Room' },
-  { id: 'conf-seat-6', label: 'Conference Seat 6', x: 8, y: 2, sectionId: 'conference', channelMode: 'common', channelName: 'Conference Room' },
-  { id: 'conf-seat-7', label: 'Conference Seat 7', x: 4, y: 5, sectionId: 'conference', channelMode: 'common', channelName: 'Conference Room' },
-  { id: 'conf-seat-8', label: 'Conference Seat 8', x: 6, y: 5, sectionId: 'conference', channelMode: 'common', channelName: 'Conference Room' },
+  { id: 'conf-seat-1', label: 'Conference Seat 1', x: 12, y: 3, sectionId: 'conference', channelMode: 'common', channelName: 'Conference Room' },
+  { id: 'conf-seat-2', label: 'Conference Seat 2', x: 12, y: 4, sectionId: 'conference', channelMode: 'common', channelName: 'Conference Room' },
+  { id: 'conf-seat-3', label: 'Conference Seat 3', x: 12, y: 5, sectionId: 'conference', channelMode: 'common', channelName: 'Conference Room' },
+  { id: 'conf-seat-4', label: 'Conference Seat 4', x: 20, y: 3, sectionId: 'conference', channelMode: 'common', channelName: 'Conference Room' },
+  { id: 'conf-seat-5', label: 'Conference Seat 5', x: 20, y: 4, sectionId: 'conference', channelMode: 'common', channelName: 'Conference Room' },
+  { id: 'conf-seat-6', label: 'Conference Seat 6', x: 20, y: 5, sectionId: 'conference', channelMode: 'common', channelName: 'Conference Room' },
+  { id: 'conf-seat-7', label: 'Conference Seat 7', x: 15, y: 6, sectionId: 'conference', channelMode: 'common', channelName: 'Conference Room' },
+  { id: 'conf-seat-8', label: 'Conference Seat 8', x: 17, y: 6, sectionId: 'conference', channelMode: 'common', channelName: 'Conference Room' },
 
-  { id: 'desk-seat-1', label: 'Desk 1', x: 14, y: 3, sectionId: 'desks', channelMode: 'private', channelName: 'Desk 1' },
-  { id: 'desk-seat-2', label: 'Desk 2', x: 18, y: 3, sectionId: 'desks', channelMode: 'private', channelName: 'Desk 2' },
-  { id: 'desk-seat-3', label: 'Desk 3', x: 22, y: 3, sectionId: 'desks', channelMode: 'private', channelName: 'Desk 3' },
-  { id: 'desk-seat-4', label: 'Desk 4', x: 14, y: 5, sectionId: 'desks', channelMode: 'private', channelName: 'Desk 4' },
-  { id: 'desk-seat-5', label: 'Desk 5', x: 18, y: 5, sectionId: 'desks', channelMode: 'private', channelName: 'Desk 5' },
-  { id: 'desk-seat-6', label: 'Desk 6', x: 22, y: 5, sectionId: 'desks', channelMode: 'private', channelName: 'Desk 6' },
+  { id: 'desk-seat-1', label: 'Desk 1', x: 15, y: 14, sectionId: 'desks', channelMode: 'private', channelName: 'Desk 1' },
+  { id: 'desk-seat-2', label: 'Desk 2', x: 24, y: 14, sectionId: 'desks', channelMode: 'private', channelName: 'Desk 2' },
+  { id: 'desk-seat-3', label: 'Desk 3', x: 33, y: 14, sectionId: 'desks', channelMode: 'private', channelName: 'Desk 3' },
+  { id: 'desk-seat-4', label: 'Desk 4', x: 15, y: 19, sectionId: 'desks', channelMode: 'private', channelName: 'Desk 4' },
+  { id: 'desk-seat-5', label: 'Desk 5', x: 24, y: 19, sectionId: 'desks', channelMode: 'private', channelName: 'Desk 5' },
+  { id: 'desk-seat-6', label: 'Desk 6', x: 33, y: 19, sectionId: 'desks', channelMode: 'private', channelName: 'Desk 6' },
 
-  { id: 'sofa-seat-1', label: 'Lounge Seat 1', x: 2, y: 10, sectionId: 'lounge', channelMode: 'common', channelName: 'Lounge' },
-  { id: 'sofa-seat-2', label: 'Lounge Seat 2', x: 3, y: 10, sectionId: 'lounge', channelMode: 'common', channelName: 'Lounge' },
-  { id: 'sofa-seat-3', label: 'Lounge Seat 3', x: 4, y: 10, sectionId: 'lounge', channelMode: 'common', channelName: 'Lounge' },
-  { id: 'sofa-seat-4', label: 'Lounge Seat 4', x: 6, y: 10, sectionId: 'lounge', channelMode: 'common', channelName: 'Lounge' },
-  { id: 'sofa-seat-5', label: 'Lounge Seat 5', x: 7, y: 10, sectionId: 'lounge', channelMode: 'common', channelName: 'Lounge' },
-  { id: 'sofa-seat-6', label: 'Lounge Seat 6', x: 8, y: 10, sectionId: 'lounge', channelMode: 'common', channelName: 'Lounge' },
-  { id: 'sofa-seat-7', label: 'Lounge Seat 7', x: 4, y: 12, sectionId: 'lounge', channelMode: 'common', channelName: 'Lounge' },
-  { id: 'sofa-seat-8', label: 'Lounge Seat 8', x: 5, y: 12, sectionId: 'lounge', channelMode: 'common', channelName: 'Lounge' },
-  { id: 'sofa-seat-9', label: 'Lounge Seat 9', x: 6, y: 12, sectionId: 'lounge', channelMode: 'common', channelName: 'Lounge' },
-
-  { id: 'library-seat-1', label: 'Library Seat 1', x: 24, y: 12, sectionId: 'library', channelMode: 'common', channelName: 'Library' },
-  { id: 'library-seat-2', label: 'Library Seat 2', x: 25, y: 12, sectionId: 'library', channelMode: 'common', channelName: 'Library' },
-  { id: 'library-seat-3', label: 'Library Seat 3', x: 26, y: 12, sectionId: 'library', channelMode: 'common', channelName: 'Library' },
-
-  { id: 'focus-seat-a', label: 'Focus Room A Desk', x: 2, y: 18, sectionId: 'focus-a', channelMode: 'private', channelName: 'Focus Room A' },
-  { id: 'focus-seat-b', label: 'Focus Room B Desk', x: 9, y: 18, sectionId: 'focus-b', channelMode: 'private', channelName: 'Focus Room B' },
-  { id: 'focus-seat-c', label: 'Focus Room C Desk', x: 16, y: 18, sectionId: 'focus-c', channelMode: 'private', channelName: 'Focus Room C' },
-  { id: 'focus-seat-d', label: 'Focus Room D Desk', x: 23, y: 18, sectionId: 'focus-d', channelMode: 'private', channelName: 'Focus Room D' },
+  { id: 'lounge-seat-1', label: 'Lounge Seat 1', x: 23, y: 6, sectionId: 'lounge', channelMode: 'common', channelName: 'Lounge' },
+  { id: 'lounge-seat-2', label: 'Lounge Seat 2', x: 26, y: 6, sectionId: 'lounge', channelMode: 'common', channelName: 'Lounge' },
+  { id: 'lounge-seat-3', label: 'Lounge Seat 3', x: 29, y: 6, sectionId: 'lounge', channelMode: 'common', channelName: 'Lounge' },
+  { id: 'library-seat-1', label: 'Library Seat 1', x: 47, y: 8, sectionId: 'library', channelMode: 'common', channelName: 'Library' },
+  { id: 'library-seat-2', label: 'Library Seat 2', x: 50, y: 8, sectionId: 'library', channelMode: 'common', channelName: 'Library' },
 ]
 
 const createGrid = (rows: number, cols: number, fill: boolean) =>
@@ -409,63 +333,168 @@ const createGrid = (rows: number, cols: number, fill: boolean) =>
 
 const wallMap = createGrid(MAP_ROWS, MAP_COLS, false)
 
-const addWallRect = (
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  door?: { x: number; y: number },
-) => {
-  const maxX = x + width - 1
-  const maxY = y + height - 1
-  for (let col = x; col <= maxX; col += 1) {
-    if (!door || door.x !== col || door.y !== y) {
-      wallMap[y][col] = true
-    }
-    if (!door || door.x !== col || door.y !== maxY) {
-      wallMap[maxY][col] = true
-    }
-  }
-  for (let row = y; row <= maxY; row += 1) {
-    if (!door || door.x !== x || door.y !== row) {
-      wallMap[row][x] = true
-    }
-    if (!door || door.x !== maxX || door.y !== row) {
-      wallMap[row][maxX] = true
-    }
-  }
-}
+type Rect = { x: number; y: number; width: number; height: number }
 
-addWallRect(1, 1, 10, 6, { x: 6, y: 6 })
-addWallRect(12, 1, 17, 6, { x: 20, y: 6 })
-addWallRect(1, 8, 9, 6, { x: 5, y: 8 })
-addWallRect(12, 8, 9, 6, { x: 16, y: 8 })
-addWallRect(21, 8, 8, 6, { x: 24, y: 8 })
-addWallRect(1, 15, 6, 6, { x: 3, y: 15 })
-addWallRect(8, 15, 6, 6, { x: 10, y: 15 })
-addWallRect(15, 15, 6, 6, { x: 17, y: 15 })
-addWallRect(22, 15, 6, 6, { x: 24, y: 15 })
+const walkableRects: Rect[] = [
+  // Main horizontal and vertical circulation.
+  { x: 9, y: 0, width: 1, height: 29 },
+  { x: 43, y: 0, width: 1, height: 29 },
+  { x: 9, y: 9, width: 35, height: 3 },
+  { x: 10, y: 20, width: 34, height: 2 },
+  { x: 18, y: 21, width: 2, height: 8 },
+  { x: 33, y: 21, width: 1, height: 8 },
+  { x: 42, y: 21, width: 2, height: 8 },
+  { x: 20, y: 25, width: 13, height: 4 },
+
+  // Left private desk rooms.
+  { x: 1, y: 1, width: 7, height: 4 },
+  { x: 1, y: 6, width: 7, height: 4 },
+  { x: 1, y: 11, width: 7, height: 4 },
+  { x: 1, y: 16, width: 7, height: 5 },
+  { x: 1, y: 22, width: 7, height: 6 },
+
+  // Top common areas.
+  { x: 10, y: 1, width: 11, height: 7 },
+  { x: 22, y: 1, width: 9, height: 7 },
+  { x: 32, y: 1, width: 11, height: 8 },
+  { x: 45, y: 1, width: 7, height: 8 },
+
+  // Central desks and lower common rooms.
+  { x: 12, y: 12, width: 27, height: 8 },
+  { x: 10, y: 22, width: 9, height: 7 },
+  { x: 20, y: 22, width: 13, height: 7 },
+  { x: 34, y: 22, width: 9, height: 7 },
+
+  // Right private desk rooms.
+  { x: 45, y: 10, width: 7, height: 4 },
+  { x: 45, y: 15, width: 7, height: 4 },
+  { x: 45, y: 20, width: 7, height: 5 },
+]
+
+const walkableMap = createGrid(MAP_ROWS, MAP_COLS, false)
+
+walkableRects.forEach((rect) => {
+  for (let row = rect.y; row < rect.y + rect.height; row += 1) {
+    for (let col = rect.x; col < rect.x + rect.width; col += 1) {
+      if (row >= 0 && row < MAP_ROWS && col >= 0 && col < MAP_COLS) {
+        walkableMap[row][col] = true
+      }
+    }
+  }
+})
+
+const blockedRects: Rect[] = [
+  // Outer bounds.
+  { x: 0, y: 0, width: MAP_COLS, height: 1 },
+  { x: 0, y: MAP_ROWS - 1, width: MAP_COLS, height: 1 },
+  { x: 0, y: 0, width: 1, height: MAP_ROWS },
+  { x: MAP_COLS - 1, y: 0, width: 1, height: MAP_ROWS },
+
+  // Baked wall bands and room dividers.
+  { x: 8, y: 0, width: 1, height: 30 },
+  { x: 44, y: 0, width: 1, height: 30 },
+  { x: 10, y: 0, width: 1, height: 9 },
+  { x: 21, y: 0, width: 1, height: 9 },
+  { x: 31, y: 0, width: 1, height: 9 },
+  { x: 44, y: 0, width: 1, height: 9 },
+  { x: 10, y: 8, width: 35, height: 1 },
+  { x: 0, y: 5, width: 9, height: 1 },
+  { x: 0, y: 10, width: 9, height: 1 },
+  { x: 0, y: 15, width: 9, height: 1 },
+  { x: 0, y: 21, width: 9, height: 1 },
+  { x: 0, y: 27, width: 9, height: 1 },
+  { x: 44, y: 9, width: 9, height: 1 },
+  { x: 44, y: 14, width: 9, height: 1 },
+  { x: 44, y: 19, width: 9, height: 1 },
+  { x: 44, y: 25, width: 9, height: 1 },
+  { x: 10, y: 21, width: 9, height: 1 },
+  { x: 19, y: 21, width: 1, height: 8 },
+  { x: 33, y: 21, width: 1, height: 8 },
+  { x: 42, y: 21, width: 1, height: 8 },
+
+  // Major built-in furniture from the baked background.
+  { x: 13, y: 3, width: 7, height: 3 },
+  { x: 22, y: 2, width: 8, height: 4 },
+  { x: 34, y: 2, width: 9, height: 3 },
+  { x: 46, y: 1, width: 6, height: 2 },
+  { x: 47, y: 5, width: 4, height: 3 },
+  { x: 2, y: 1, width: 5, height: 3 },
+  { x: 2, y: 6, width: 5, height: 3 },
+  { x: 2, y: 12, width: 5, height: 3 },
+  { x: 2, y: 18, width: 5, height: 3 },
+  { x: 2, y: 24, width: 5, height: 3 },
+  { x: 14, y: 12, width: 5, height: 2 },
+  { x: 23, y: 12, width: 5, height: 2 },
+  { x: 32, y: 12, width: 5, height: 2 },
+  { x: 14, y: 17, width: 5, height: 2 },
+  { x: 23, y: 17, width: 5, height: 2 },
+  { x: 32, y: 17, width: 5, height: 2 },
+  { x: 21, y: 22, width: 11, height: 3 },
+  { x: 11, y: 22, width: 7, height: 5 },
+  { x: 34, y: 22, width: 8, height: 5 },
+  { x: 46, y: 11, width: 5, height: 3 },
+  { x: 46, y: 16, width: 5, height: 3 },
+  { x: 46, y: 22, width: 5, height: 3 },
+]
+
+blockedRects.forEach((rect) => {
+  for (let row = rect.y; row < rect.y + rect.height; row += 1) {
+    for (let col = rect.x; col < rect.x + rect.width; col += 1) {
+      if (row >= 0 && row < MAP_ROWS && col >= 0 && col < MAP_COLS) {
+        wallMap[row][col] = true
+      }
+    }
+  }
+})
+
+const openings: Rect[] = [
+  // Left office doors into the main hallway.
+  { x: 8, y: 3, width: 1, height: 2 },
+  { x: 8, y: 8, width: 1, height: 2 },
+  { x: 8, y: 13, width: 1, height: 2 },
+  { x: 8, y: 19, width: 1, height: 2 },
+  { x: 8, y: 25, width: 1, height: 2 },
+
+  // Top/common area doors into the central workspace.
+  { x: 11, y: 8, width: 3, height: 1 },
+  { x: 21, y: 8, width: 4, height: 1 },
+  { x: 31, y: 8, width: 4, height: 1 },
+  { x: 43, y: 8, width: 3, height: 1 },
+
+  // Right office doors into the hallway.
+  { x: 44, y: 4, width: 1, height: 2 },
+  { x: 44, y: 11, width: 1, height: 2 },
+  { x: 44, y: 17, width: 1, height: 2 },
+  { x: 44, y: 23, width: 1, height: 2 },
+
+  // Bottom lounge/cafeteria openings.
+  { x: 13, y: 21, width: 4, height: 1 },
+  { x: 34, y: 21, width: 4, height: 1 },
+]
+
+openings.forEach((rect) => {
+  for (let row = rect.y; row < rect.y + rect.height; row += 1) {
+    for (let col = rect.x; col < rect.x + rect.width; col += 1) {
+      if (row >= 0 && row < MAP_ROWS && col >= 0 && col < MAP_COLS) {
+        wallMap[row][col] = false
+        walkableMap[row][col] = true
+      }
+    }
+  }
+})
 
 export const collisionMap: boolean[][] = Array.from(
   { length: MAP_ROWS },
   (_, row) =>
     Array.from({ length: MAP_COLS }, (_, col) => {
+      if (!walkableMap[row][col]) {
+        return false
+      }
       if (wallMap[row][col]) {
         return false
       }
-      const blockedByFurniture = furniture.some((item) => {
-        return (
-          col >= item.x &&
-          col < item.x + item.width &&
-          row >= item.y &&
-          row < item.y + item.height
-        )
-      })
-      if (blockedByFurniture) {
-        return false
-      }
       const isBlocked = objects.some((object) => {
-        if (object.type === 'door') {
+        if (object.interactive) {
           return false
         }
         return (

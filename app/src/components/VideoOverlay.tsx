@@ -96,6 +96,10 @@ export function VideoOverlay({ nearbyPeers }: VideoOverlayProps) {
         ? 'grid-cols-2'
         : 'grid-cols-3'
 
+  if (orderedBubbles.length === 0) {
+    return null
+  }
+
   return (
     <div className="pointer-events-none fixed bottom-[72px] right-4 z-10 pixel-ui">
       <div className={`grid gap-3 ${gridClass}`}>

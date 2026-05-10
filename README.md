@@ -58,14 +58,15 @@ npm run preview  # preview production build locally
 npm run lint     # run ESLint checks
 ```
 
-## Local AI Conference Captions + Summary
+## Conference Captions + Gemini Summary
 
 Conference room now supports:
 
 - Live speech-to-text captions
-- Auto-generated meeting summary (key points, actions, decisions)
+- Auto-generated meeting summary through Gemini when `VITE_GEMINI_API_KEY` is configured
+- Local heuristic meeting summary fallback when Gemini is not configured
 
-Everything is local-only. No external transcription API calls are used.
+Speech-to-text still runs through the local STT service. Meeting summary generation uses Gemini from the frontend when the API key is present.
 
 ### Start the local STT service
 
@@ -104,6 +105,17 @@ Then enter the conference room and use:
 - `Clear Notes`
 - `Share Screen`
 - `Mic On/Off`
+
+### Enable Gemini for Ana and meeting summaries
+
+In `app/.env`:
+
+```bash
+VITE_GEMINI_API_KEY=your_api_key_here
+VITE_GEMINI_MODEL=gemini-2.5-flash
+```
+
+Ana and conference summaries fall back gracefully when the key is absent.
 
 ## Optional: Sprite Utility Script
 
